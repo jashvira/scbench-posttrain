@@ -5,11 +5,14 @@ build-backend = "hatchling.build"
 [project]
 name = "scbench-posttrain"
 version = "0.1.0"
-description = "Small SCBench post-training scaffold"
+description = "Inspect-native Delaunay eval pilot"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+  "numpy>=2.1",
+  "openai>=2.28.0",
   "pydantic>=2.8",
+  "scipy>=1.14",
 ]
 
 [dependency-groups]
@@ -22,9 +25,6 @@ dev = [
 inspect = [
   "inspect-ai>=0.3",
 ]
-tinker = [
-  "tinker-cookbook>=0.1.0",
-]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/scbench_posttrain"]
@@ -35,3 +35,4 @@ testpaths = ["tests"]
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+extend-exclude = ["external/VisGeomBench"]
