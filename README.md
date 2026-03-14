@@ -19,10 +19,10 @@ export OPENAI_BASE_URL=...
 ## Run
 
 ```bash
-inspect eval evals/delaunay.py
-inspect eval evals/delaunay.py --solver delaunay_rlm_repl
-inspect eval evals/delaunay.py --solver delaunay_rlm_full
-inspect view
+uv run --with openai inspect eval evals/delaunay.py --model openai/gpt-5-nano-2025-08-07
+uv run --with openai inspect eval evals/delaunay.py --model openai/gpt-5-nano-2025-08-07 --solver delaunay_rlm_repl
+uv run --with openai inspect eval evals/delaunay.py --model openai/gpt-5-nano-2025-08-07 --solver delaunay_rlm_full
+uv run inspect view
 ```
 
 ## Check
