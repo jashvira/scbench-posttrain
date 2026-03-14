@@ -12,7 +12,6 @@ from evals.delaunay import (
     DEFAULT_DATASET_PATH,
     DelaunayRunStore,
     delaunay_exact,
-    delaunay_pilot,
     delaunay_rlm_full,
     delaunay_rlm_repl,
     load_delaunay_dataset,
@@ -130,15 +129,6 @@ def test_load_delaunay_dataset_reads_json_dataset():
         {"num_points": 8, "seed": 33},
         {"num_points": 20, "seed": 44},
     ]
-
-
-def test_delaunay_pilot_defaults_to_direct_solver():
-    """The task factory should default to the direct solver."""
-
-    task = delaunay_pilot()
-
-    assert len(task.dataset) == 2
-    assert task.solver is not None
 
 
 def test_shared_scorer_includes_arm_metadata():

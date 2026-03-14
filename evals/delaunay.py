@@ -7,7 +7,7 @@ from typing import Any
 
 from inspect_ai import Task, task
 from inspect_ai.dataset import Sample, json_dataset
-from inspect_ai.model import ChatMessageAssistant, ModelOutput
+from inspect_ai.model import ChatMessageAssistant, GenerateConfig, ModelOutput
 from inspect_ai.scorer import Score, scorer
 from inspect_ai.solver import Generate, Solver, TaskState, generate, solver
 from inspect_ai.util import StoreModel
@@ -20,6 +20,16 @@ from scbench_posttrain.delaunay import (
 )
 
 DEFAULT_DATASET_PATH = Path(__file__).resolve().parents[1] / "data" / "delaunay_pilot.jsonl"
+DEFAULT_GENERATE_CONFIG = GenerateConfig(
+    max_retries=0,
+    timeout=240,
+    attempt_timeout=180,
+    reasoning_summary="concise",
+    reasoning_effort="xhigh",
+    max_tokens=32768,
+    verbosity="low",
+)
+DEFAULT_GENERATE_CONFIG_METADATA = DEFAULT_GENERATE_CONFIG.model_dump(exclude_none=True)
 
 
 class DelaunayRunStore(StoreModel):
@@ -267,4 +277,6 @@ def delaunay_pilot(
         dataset=load_delaunay_dataset(dataset_path),
         solver=solver or delaunay_direct(),
         scorer=delaunay_exact(),
+        config=DEFAULT_GENERATE_CONFIG,
+        metadata={"generate_config": DEFAULT_GENERATE_CONFIG_METADATA},
     )
