@@ -1,29 +1,33 @@
 # scbench-posttrain
 
-Small SCBench post-training scaffold.
-
-The repo is intentionally flat for now:
-
-- `tasks.py`: shared task/verifier types and a tiny registry
-- `inspect.py`: Inspect adapter
-- `tinker.py`: single-turn Tinker env adapter
-
-## Getting Started
+## Setup
 
 ```bash
 cd /Users/jashvira/code/scbench-posttrain
 uv venv
-uv sync --group dev
+uv sync --group dev --extra inspect
+uv pip install git+https://github.com/alexzhang13/rlm.git
 ```
 
-If you need the optional integrations later:
+## Env
 
 ```bash
-uv sync --group dev --extra inspect --extra tinker
+export OPENAI_API_KEY=...
+export OPENAI_BASE_URL=...
 ```
 
-## Next
+## Run
 
-- add the first concrete SCBench task family
-- add one eval entrypoint
-- add training code only once the first task exists
+```bash
+inspect eval evals/delaunay.py
+inspect eval evals/delaunay.py --solver delaunay_rlm_repl
+inspect eval evals/delaunay.py --solver delaunay_rlm_full
+inspect view
+```
+
+## Check
+
+```bash
+uv run pytest
+uv run ruff check
+```
