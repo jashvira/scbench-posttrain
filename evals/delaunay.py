@@ -22,10 +22,10 @@ from scbench_posttrain.delaunay import (
 DEFAULT_DATASET_PATH = Path(__file__).resolve().parents[1] / "data" / "delaunay_pilot.jsonl"
 DEFAULT_GENERATE_CONFIG = GenerateConfig(
     max_retries=0,
-    timeout=240,
-    attempt_timeout=180,
+    timeout=960,
+    attempt_timeout=900,
     reasoning_summary="concise",
-    reasoning_effort="xhigh",
+    reasoning_effort="high",
     max_tokens=32768,
     verbosity="low",
 )
