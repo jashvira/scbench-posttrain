@@ -65,7 +65,15 @@ def _install_fake_rlm(monkeypatch):
         def to_dict(self) -> dict[str, object]:
             """Return a small fake usage payload."""
 
-            return {"fake-model": {"total_calls": 1, "total_input_tokens": 10, "total_output_tokens": 5}}
+            return {
+                "model_usage_summaries": {
+                    "fake-model": {
+                        "total_calls": 1,
+                        "total_input_tokens": 10,
+                        "total_output_tokens": 5,
+                    }
+                }
+            }
 
     class FakeCompletion:
         def __init__(self, response: str):
@@ -74,7 +82,17 @@ def _install_fake_rlm(monkeypatch):
             self.response = response
             self.usage_summary = FakeUsageSummary()
             self.execution_time = 0.25
-            self.metadata = {"iterations": [{"iteration": 1}]}
+            self.metadata = {
+                "run_metadata": {"root_model": "fake-model", "max_depth": 2},
+                "iterations": [
+                    {
+                        "iteration": 1,
+                        "response": "thinking",
+                        "code_blocks": [],
+                        "final_answer": "[[0, 1, 2]]",
+                    }
+                ],
+            }
 
     class FakeLogger:
         def __init__(self, *args, **kwargs):
@@ -146,6 +164,8 @@ def test_shared_scorer_includes_arm_metadata():
     assert result.metadata["parsed_ok"] is True
     assert result.metadata["passed"] is True
     assert result.metadata["arm"] == "rlm_full"
+    assert "rlm_trace" not in result.metadata
+    assert "rlm_run_config" not in result.metadata
 
 
 def test_delaunay_rlm_repl_solver_uses_native_shallow_settings(monkeypatch):
@@ -159,6 +179,19 @@ def test_delaunay_rlm_repl_solver_uses_native_shallow_settings(monkeypatch):
 
     assert solved.output.completion == "[[0, 1, 2]]"
     assert store.arm == "rlm_repl"
+    assert store.rlm_trace["run_metadata"]["root_model"] == "fake-model"
+    assert store.rlm_trace["iterations"][0]["final_answer"] == "[[0, 1, 2]]"
+    assert store.trajectory_present is True
+    assert store.trajectory_iterations == 1
+    assert store.rlm_run_config["arm"] == "rlm_repl"
+    assert store.rlm_run_config["backend"] == "openai"
+    assert store.rlm_run_config["environment"] == "local"
+    assert store.rlm_run_config["rlm_model_name"] == "fake-model"
+    assert store.rlm_run_config["max_iterations"] == 12
+    assert store.rlm_run_config["max_depth"] == 1
+    assert store.rlm_run_config["other_backends"] == []
+    assert "Recursive child RLM calls are not enabled" in store.rlm_run_config["root_prompt"]
+    assert "api_key" not in str(store.rlm_run_config)
     assert fake_rlm.init_calls[0]["max_depth"] == 1
     assert "other_backends" not in fake_rlm.init_calls[0]
 
@@ -176,5 +209,10 @@ def test_delaunay_rlm_full_solver_uses_recursive_backend(monkeypatch):
 
     assert solved.output.completion == "[[0, 1, 2]]"
     assert store.arm == "rlm_full"
+    assert store.rlm_trace["iterations"][0]["final_answer"] == "[[0, 1, 2]]"
+    assert store.rlm_run_config["arm"] == "rlm_full"
+    assert store.rlm_run_config["other_backends"] == ["openai"]
+    assert "recursive LM helpers" in store.rlm_run_config["root_prompt"]
+    assert "api_key" not in str(store.rlm_run_config)
     assert fake_rlm.init_calls[0]["max_depth"] == 2
     assert fake_rlm.init_calls[0]["other_backends"] == ["openai"]

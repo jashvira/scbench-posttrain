@@ -39,9 +39,17 @@ class DelaunayRunStore(StoreModel):
     trajectory_present: bool = False
     trajectory_iterations: int = 0
     rlm_model_name: str | None = None
+    rlm_trace: dict[str, Any] = Field(default_factory=dict)
+    rlm_run_config: dict[str, Any] = Field(default_factory=dict)
 
 
 DelaunayRunStore.model_rebuild()
+
+
+def _json_safe(value: Any) -> Any:
+    """Convert nested values into a JSON-serializable shape with minimal coercion."""
+
+    return json.loads(json.dumps(value, default=str))
 
 
 def _delaunay_record(state: TaskState, metadata: DelaunaySampleMetadata) -> dict[str, Any]:
@@ -165,13 +173,26 @@ async def _run_rlm_arm(
 
     prompt_context = [{"role": message.role, "content": message.text} for message in state.messages]
     root_prompt = _rlm_root_prompt(arm)
+    store.rlm_run_config = _json_safe(
+        {
+            "arm": arm,
+            "backend": rlm_kwargs["backend"],
+            "environment": rlm_kwargs["environment"],
+            "rlm_model_name": resolved_model_name,
+            "max_iterations": max_iterations,
+            "max_depth": rlm_kwargs["max_depth"],
+            "root_prompt": root_prompt,
+            "other_backends": rlm_kwargs.get("other_backends", []),
+        }
+    )
     runner = RLM(**rlm_kwargs)
     completion = runner.completion(prompt_context, root_prompt=root_prompt)
 
     store.rlm_execution_time_seconds = completion.execution_time
     store.usage_summary = completion.usage_summary.to_dict()
-    store.trajectory_present = completion.metadata is not None
-    store.trajectory_iterations = len((completion.metadata or {}).get("iterations", []))
+    store.rlm_trace = _json_safe(completion.metadata or {})
+    store.trajectory_present = bool(store.rlm_trace)
+    store.trajectory_iterations = len(store.rlm_trace.get("iterations", []))
 
     model_name = str(state.model)
     state.output = ModelOutput.from_content(model=model_name, content=completion.response)
