@@ -52,6 +52,41 @@ def _json_safe(value: Any) -> Any:
     return json.loads(json.dumps(value, default=str))
 
 
+def _merge_usage_summaries(usages: list[dict[str, Any]]) -> dict[str, Any]:
+    """Merge multiple RLM usage summaries into one aggregate payload."""
+
+    merged: dict[str, dict[str, float | int]] = {}
+    total_cost = 0.0
+    has_cost = False
+
+    for usage in usages:
+        for model, summary in usage.get("model_usage_summaries", {}).items():
+            bucket = merged.setdefault(
+                model,
+                {
+                    "total_calls": 0,
+                    "total_input_tokens": 0,
+                    "total_output_tokens": 0,
+                },
+            )
+            bucket["total_calls"] += int(summary.get("total_calls", 0))
+            bucket["total_input_tokens"] += int(summary.get("total_input_tokens", 0))
+            bucket["total_output_tokens"] += int(summary.get("total_output_tokens", 0))
+            if "total_cost" in summary and summary["total_cost"] is not None:
+                bucket["total_cost"] = float(bucket.get("total_cost", 0.0)) + float(
+                    summary["total_cost"]
+                )
+
+        if "total_cost" in usage and usage["total_cost"] is not None:
+            total_cost += float(usage["total_cost"])
+            has_cost = True
+
+    result: dict[str, Any] = {"model_usage_summaries": merged}
+    if has_cost:
+        result["total_cost"] = total_cost
+    return result
+
+
 def _delaunay_record(state: TaskState, metadata: DelaunaySampleMetadata) -> dict[str, Any]:
     """Rebuild the verifier record shape for a sample from Inspect state."""
 
@@ -161,6 +196,7 @@ async def _run_rlm_arm(
     store = state.store_as(DelaunayRunStore)
     store.arm = arm
     store.rlm_model_name = resolved_model_name
+    record = _delaunay_record(state, state.metadata_as(DelaunaySampleMetadata))
 
     rlm_kwargs: dict[str, Any] = {
         "backend": "openai",
@@ -186,11 +222,13 @@ async def _run_rlm_arm(
             "max_depth": rlm_kwargs["max_depth"],
             "root_prompt": root_prompt,
             "other_backends": rlm_kwargs.get("other_backends", []),
+            "repair_attempted": False,
         }
     )
     runner = RLM(**rlm_kwargs)
     completion = runner.completion(prompt_context, root_prompt=root_prompt)
-    evaluation = score_delaunay_answer(completion.response, _delaunay_record(state, state.metadata_as(DelaunaySampleMetadata)))
+    completions = [completion]
+    evaluation = score_delaunay_answer(completion.response, record)
     if not evaluation.passed and evaluation.error_type != "exact_mismatch":
         repair_prompt = (
             f"{root_prompt} "
@@ -199,15 +237,17 @@ async def _run_rlm_arm(
             "Continue using the REPL and only finalize with the triangulation itself."
         )
         completion = runner.completion(prompt_context, root_prompt=repair_prompt)
+        completions.append(completion)
         store.rlm_run_config["repair_attempted"] = True
-    else:
-        store.rlm_run_config["repair_attempted"] = False
 
-    store.rlm_execution_time_seconds = completion.execution_time
-    store.usage_summary = completion.usage_summary.to_dict()
-    store.rlm_trace = _json_safe(completion.metadata or {})
+    traces = [_json_safe(item.metadata or {}) for item in completions if item.metadata]
+    store.rlm_execution_time_seconds = sum(item.execution_time for item in completions)
+    store.usage_summary = _merge_usage_summaries(
+        [item.usage_summary.to_dict() for item in completions]
+    )
+    store.rlm_trace = {"attempts": traces} if traces else {}
     store.trajectory_present = bool(store.rlm_trace)
-    store.trajectory_iterations = len(store.rlm_trace.get("iterations", []))
+    store.trajectory_iterations = sum(len(trace.get("iterations", [])) for trace in traces)
 
     model_name = str(state.model)
     state.output = ModelOutput.from_content(model=model_name, content=completion.response)

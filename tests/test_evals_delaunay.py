@@ -184,8 +184,9 @@ def test_delaunay_rlm_repl_solver_uses_native_shallow_settings(monkeypatch):
 
     assert solved.output.completion == "[[0, 1, 2]]"
     assert store.arm == "rlm_repl"
-    assert store.rlm_trace["run_metadata"]["root_model"] == "fake-model"
-    assert store.rlm_trace["iterations"][0]["final_answer"] == "[[0, 1, 2]]"
+    assert len(store.rlm_trace["attempts"]) == 1
+    assert store.rlm_trace["attempts"][0]["run_metadata"]["root_model"] == "fake-model"
+    assert store.rlm_trace["attempts"][0]["iterations"][0]["final_answer"] == "[[0, 1, 2]]"
     assert store.trajectory_present is True
     assert store.trajectory_iterations == 1
     assert store.rlm_run_config["arm"] == "rlm_repl"
@@ -214,7 +215,7 @@ def test_delaunay_rlm_full_solver_uses_recursive_backend(monkeypatch):
 
     assert solved.output.completion == "[[0, 1, 2]]"
     assert store.arm == "rlm_full"
-    assert store.rlm_trace["iterations"][0]["final_answer"] == "[[0, 1, 2]]"
+    assert store.rlm_trace["attempts"][0]["iterations"][0]["final_answer"] == "[[0, 1, 2]]"
     assert store.rlm_run_config["arm"] == "rlm_full"
     assert store.rlm_run_config["other_backends"] == ["openai"]
     assert "recursive LM helpers" in store.rlm_run_config["root_prompt"]
@@ -238,5 +239,17 @@ def test_delaunay_rlm_retries_malformed_meta_final(monkeypatch):
 
     assert solved.output.completion == "[[0, 1, 2]]"
     assert store.rlm_run_config["repair_attempted"] is True
+    assert store.rlm_execution_time_seconds == 0.5
+    assert store.usage_summary == {
+        "model_usage_summaries": {
+            "fake-model": {
+                "total_calls": 2,
+                "total_input_tokens": 20,
+                "total_output_tokens": 10,
+            }
+        }
+    }
+    assert len(store.rlm_trace["attempts"]) == 2
+    assert store.trajectory_iterations == 2
     assert len(fake_rlm.completion_calls) == 2
     assert "Do not ask for more work" in fake_rlm.completion_calls[1]["root_prompt"]
