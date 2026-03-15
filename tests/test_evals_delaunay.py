@@ -102,6 +102,8 @@ def _install_fake_rlm(monkeypatch):
 
     class FakeRLM:
         init_calls: list[dict[str, object]] = []
+        responses = ["[[0, 1, 2]]"]
+        completion_calls: list[dict[str, object]] = []
 
         def __init__(self, **kwargs):
             """Record solver configuration for later assertions."""
@@ -111,11 +113,14 @@ def _install_fake_rlm(monkeypatch):
         def completion(self, prompt, root_prompt=None):
             """Return a fixed completion while recording call details."""
 
-            del prompt, root_prompt
-            return FakeCompletion("[[0, 1, 2]]")
+            FakeRLM.completion_calls.append({"prompt": prompt, "root_prompt": root_prompt})
+            return FakeCompletion(FakeRLM.responses.pop(0))
 
     fake_rlm_module.RLM = FakeRLM
     fake_logger_module.RLMLogger = FakeLogger
+    FakeRLM.init_calls = []
+    FakeRLM.responses = ["[[0, 1, 2]]"]
+    FakeRLM.completion_calls = []
 
     monkeypatch.setitem(sys.modules, "rlm", fake_rlm_module)
     monkeypatch.setitem(sys.modules, "rlm.logger", fake_logger_module)
@@ -216,3 +221,22 @@ def test_delaunay_rlm_full_solver_uses_recursive_backend(monkeypatch):
     assert "api_key" not in str(store.rlm_run_config)
     assert fake_rlm.init_calls[0]["max_depth"] == 2
     assert fake_rlm.init_calls[0]["other_backends"] == ["openai"]
+
+
+def test_delaunay_rlm_retries_malformed_meta_final(monkeypatch):
+    """Malformed meta-final output should trigger one repair completion."""
+
+    fake_rlm = _install_fake_rlm(monkeypatch)
+    fake_rlm.responses = [
+        '"Please run the REPL inspection first; I have requested printing `context` to read the Delaunay task before solving it."',
+        "[[0, 1, 2]]",
+    ]
+    state = _make_state(metadata=_demo_metadata())
+
+    solved = asyncio.run(delaunay_rlm_full(rlm_model_name="fake-model")(state, _unexpected_generate))
+    store = solved.store_as(DelaunayRunStore)
+
+    assert solved.output.completion == "[[0, 1, 2]]"
+    assert store.rlm_run_config["repair_attempted"] is True
+    assert len(fake_rlm.completion_calls) == 2
+    assert "Do not ask for more work" in fake_rlm.completion_calls[1]["root_prompt"]

@@ -125,6 +125,9 @@ def _rlm_root_prompt(arm: str) -> str:
     return (
         "Solve the Delaunay task in `context`. "
         f"{guidance} "
+        "Do not call FINAL or FINAL_VAR until you have the actual triangulation. "
+        "If you are still inspecting `context` or testing code, continue iterating. "
+        "Never finalize with a request for more work, a next-step note, or any other non-answer text. "
         "When you have the final triangulation, assign it to a variable and return it with FINAL_VAR."
     )
 
@@ -187,6 +190,18 @@ async def _run_rlm_arm(
     )
     runner = RLM(**rlm_kwargs)
     completion = runner.completion(prompt_context, root_prompt=root_prompt)
+    evaluation = score_delaunay_answer(completion.response, _delaunay_record(state, state.metadata_as(DelaunaySampleMetadata)))
+    if not evaluation.passed and evaluation.error_type != "exact_mismatch":
+        repair_prompt = (
+            f"{root_prompt} "
+            "Your previous completion was not a valid triangulation. "
+            "Do not ask for more work or describe your next step. "
+            "Continue using the REPL and only finalize with the triangulation itself."
+        )
+        completion = runner.completion(prompt_context, root_prompt=repair_prompt)
+        store.rlm_run_config["repair_attempted"] = True
+    else:
+        store.rlm_run_config["repair_attempted"] = False
 
     store.rlm_execution_time_seconds = completion.execution_time
     store.usage_summary = completion.usage_summary.to_dict()
