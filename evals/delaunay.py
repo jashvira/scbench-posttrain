@@ -44,6 +44,22 @@ class DelaunayRunStore(StoreModel):
 DelaunayRunStore.model_rebuild()
 
 
+def _delaunay_record(state: TaskState, metadata: DelaunaySampleMetadata) -> dict[str, Any]:
+    """Rebuild the verifier record shape for a sample from Inspect state."""
+
+    return {
+        "id": metadata.record_id,
+        "prompt": state.input_text,
+        "ground_truth": metadata.ground_truth,
+        "metadata": {
+            "problem_type": metadata.problem_type,
+            "difficulty": metadata.difficulty,
+            "tags": metadata.tags,
+        },
+        "datagen_args": metadata.datagen_args,
+    }
+
+
 def record_to_sample(record: dict[str, Any]) -> Sample:
     """Map a frozen JSONL record into a normal Inspect sample."""
 
@@ -89,6 +105,22 @@ def _resolve_rlm_model_name(state: TaskState, override: str | None) -> str:
     return resolved
 
 
+def _rlm_root_prompt(arm: str) -> str:
+    """Return the control prompt for an RLM solver arm."""
+
+    guidance = (
+        "Use the local Python REPL and built-in query helpers if useful. "
+        "Recursive child RLM calls are not enabled in this arm."
+        if arm == "rlm_repl"
+        else "Use the local Python REPL and recursive LM helpers if useful."
+    )
+    return (
+        "Solve the Delaunay task in `context`. "
+        f"{guidance} "
+        "When you have the final triangulation, assign it to a variable and return it with FINAL_VAR."
+    )
+
+
 async def _run_rlm_arm(
     state: TaskState,
     *,
@@ -132,14 +164,7 @@ async def _run_rlm_arm(
         rlm_kwargs["other_backend_kwargs"] = [backend_kwargs.copy()]
 
     prompt_context = [{"role": message.role, "content": message.text} for message in state.messages]
-    root_prompt = (
-        "Solve the Delaunay task in `context`. Use the local Python REPL and built-in query helpers if useful. "
-        "Recursive child RLM calls are not enabled in this arm. "
-        "When you have the final triangulation, assign it to a variable and return it with FINAL_VAR."
-        if arm == "rlm_repl"
-        else "Solve the Delaunay task in `context`. Use the local Python REPL and recursive LM helpers if useful. "
-        "When you have the final triangulation, assign it to a variable and return it with FINAL_VAR."
-    )
+    root_prompt = _rlm_root_prompt(arm)
     runner = RLM(**rlm_kwargs)
     completion = runner.completion(prompt_context, root_prompt=root_prompt)
 
@@ -230,17 +255,7 @@ def delaunay_exact():
         store = state.store_as(DelaunayRunStore)
         evaluation = score_delaunay_answer(
             state.output.completion if state.output is not None else "",
-            {
-                "id": metadata.record_id,
-                "prompt": state.input_text,
-                "ground_truth": metadata.ground_truth,
-                "metadata": {
-                    "problem_type": metadata.problem_type,
-                    "difficulty": metadata.difficulty,
-                    "tags": metadata.tags,
-                },
-                "datagen_args": metadata.datagen_args,
-            },
+            _delaunay_record(state, metadata),
         )
 
         return Score(
