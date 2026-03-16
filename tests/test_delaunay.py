@@ -12,6 +12,7 @@ from scbench_posttrain.delaunay import (
     DelaunayRecord,
     extract_python_literal,
     generate_dataset_record,
+    render_delaunay_prompt_image,
     sample_unique_delaunay_points,
     score_delaunay_answer,
 )
@@ -26,14 +27,12 @@ from scbench_posttrain.delaunay import (
     ],
 )
 def test_generate_dataset_record_matches_vgb_core(datagen_args):
-    """Local record generation should keep VGB geometry while dropping CoT scaffolding."""
+    """Local record generation should match the upstream VGB Delaunay record exactly."""
 
     local_record = generate_dataset_record(datagen_args)
     vgb_record = vgb_generate_dataset_record(datagen_args)
 
-    assert local_record["ground_truth"] == vgb_record["ground_truth"]
-    assert "<thinking>" not in local_record["prompt"]
-    assert local_record["prompt"] != vgb_record["prompt"]
+    assert local_record == vgb_record
 
 
 def test_sample_unique_delaunay_points_is_deterministic():
@@ -63,6 +62,12 @@ def test_extract_python_literal_strips_thinking_and_prefers_last_literal():
     """
 
     assert extract_python_literal(text) == "[[0, 1, 2], [1, 2, 3]]"
+
+
+def test_extract_python_literal_parses_simple_sequences():
+    """Simple comma-delimited sequences should follow the upstream parser fallback."""
+
+    assert extract_python_literal("answer: 0, 1, 2") == "[0, 1, 2]"
 
 
 def test_score_delaunay_answer_accepts_unsorted_triangles():
@@ -104,3 +109,11 @@ def test_score_delaunay_answer_reports_parse_failure():
     assert evaluation.parsed_ok is False
     assert evaluation.passed is False
     assert evaluation.error_type == "parse_failure"
+
+
+def test_render_delaunay_prompt_image_returns_svg_data_url():
+    """Prompt visuals should be emitted as SVG data URLs."""
+
+    image = render_delaunay_prompt_image({"num_points": 8, "seed": 33})
+
+    assert image.startswith("data:image/svg+xml;base64,")
