@@ -140,6 +140,7 @@ def test_record_to_sample_maps_frozen_record():
     assert sample.target == json.dumps(record["ground_truth"])
     assert sample.metadata["record_id"] == record["id"]
     assert sample.metadata["difficulty"] == "easy"
+    assert sample.metadata["prompt_image"].startswith("data:image/svg+xml;base64,")
 
 
 def test_load_delaunay_dataset_reads_json_dataset():
@@ -147,10 +148,13 @@ def test_load_delaunay_dataset_reads_json_dataset():
 
     dataset = load_delaunay_dataset(DEFAULT_DATASET_PATH)
 
-    assert len(dataset) == 2
+    assert len(dataset) == 5
     assert [sample.metadata["datagen_args"] for sample in dataset] == [
-        {"num_points": 8, "seed": 33},
-        {"num_points": 20, "seed": 44},
+        {"num_points": 30, "seed": 101},
+        {"num_points": 35, "seed": 202},
+        {"num_points": 40, "seed": 303},
+        {"num_points": 45, "seed": 404},
+        {"num_points": 50, "seed": 505},
     ]
 
 

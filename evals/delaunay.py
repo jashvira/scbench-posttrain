@@ -7,7 +7,11 @@ from typing import Any
 
 from inspect_ai import Task, task
 from inspect_ai.dataset import Sample, json_dataset
-from inspect_ai.model import ChatMessageAssistant, GenerateConfig, ModelOutput
+from inspect_ai.model import (
+    ChatMessageAssistant,
+    GenerateConfig,
+    ModelOutput,
+)
 from inspect_ai.scorer import Score, scorer
 from inspect_ai.solver import Generate, Solver, TaskState, generate, solver
 from inspect_ai.util import StoreModel
@@ -16,6 +20,7 @@ from pydantic import Field
 from scbench_posttrain.delaunay import (
     DelaunayRecord,
     DelaunaySampleMetadata,
+    render_delaunay_prompt_image,
     score_delaunay_answer,
 )
 
@@ -115,11 +120,13 @@ def record_to_sample(record: dict[str, Any]) -> Sample:
         ground_truth=validated.ground_truth,
         datagen_args=validated.datagen_args,
     )
+    sample_metadata = metadata.model_dump(mode="json")
+    sample_metadata["prompt_image"] = render_delaunay_prompt_image(validated.datagen_args)
     return Sample(
         input=validated.prompt,
         target=json.dumps(validated.ground_truth),
         id=validated.id,
-        metadata=metadata.model_dump(mode="json"),
+        metadata=sample_metadata,
     )
 
 
