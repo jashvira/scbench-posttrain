@@ -82,7 +82,7 @@ The launcher now:
 - regenerates parquet before launch
 - exports `REPO_ROOT`, `MODEL_PATH`, and `RUN_DIR` for the Hydra config
 - auto-detects GPU count if `N_GPUS` is unset
-- starts with conservative defaults for first bring-up: `ROLLOUT_N=4`, `TRAIN_BATCH_SIZE=32`, `VAL_BATCH_SIZE=64`, `MAX_PROMPT_LENGTH=8192`, `MAX_RESPONSE_LENGTH=1024`
+- starts with conservative defaults for first bring-up: `ROLLOUT_N=4`, `TRAIN_BATCH_SIZE=32`, `VAL_BATCH_SIZE=64`, `MAX_PROMPT_LENGTH=16384`, `MAX_RESPONSE_LENGTH=1024`
 
 Override as needed with:
 
