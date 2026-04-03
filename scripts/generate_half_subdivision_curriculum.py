@@ -38,6 +38,8 @@ class Profile:
     split_prob_range: tuple[float, float]
     axis_cycles: tuple[tuple[str, ...], ...]
     difficulty: str
+    min_leaf_count: int
+    min_target_depth: int
 
 
 PROFILES: tuple[Profile, ...] = (
@@ -50,6 +52,8 @@ PROFILES: tuple[Profile, ...] = (
         split_prob_range=(0.20, 0.35),
         axis_cycles=(("x", "y"), ("y", "x"), ("x", "y", "x"), ("y", "x", "y")),
         difficulty="easy",
+        min_leaf_count=4,
+        min_target_depth=2,
     ),
     Profile(
         name="stage_02_2d_easy",
@@ -60,6 +64,8 @@ PROFILES: tuple[Profile, ...] = (
         split_prob_range=(0.35, 0.50),
         axis_cycles=(("x", "y"), ("y", "x"), ("x", "x", "y"), ("y", "y", "x")),
         difficulty="easy",
+        min_leaf_count=8,
+        min_target_depth=3,
     ),
     Profile(
         name="stage_03_2d_medium",
@@ -70,6 +76,8 @@ PROFILES: tuple[Profile, ...] = (
         split_prob_range=(0.50, 0.68),
         axis_cycles=(("x", "y", "x"), ("y", "x", "y"), ("x", "y", "y", "x")),
         difficulty="medium",
+        min_leaf_count=24,
+        min_target_depth=4,
     ),
     Profile(
         name="stage_04_2d_hard",
@@ -80,6 +88,8 @@ PROFILES: tuple[Profile, ...] = (
         split_prob_range=(0.68, 0.88),
         axis_cycles=(("x", "x", "y", "y"), ("y", "x", "x", "y"), ("x", "y", "x", "y", "x")),
         difficulty="hard",
+        min_leaf_count=48,
+        min_target_depth=5,
     ),
     Profile(
         name="stage_05_3d_intro",
@@ -90,6 +100,8 @@ PROFILES: tuple[Profile, ...] = (
         split_prob_range=(0.35, 0.52),
         axis_cycles=(("x", "y", "z"), ("z", "y", "x"), ("x", "z", "y")),
         difficulty="medium",
+        min_leaf_count=12,
+        min_target_depth=3,
     ),
     Profile(
         name="stage_06_3d_medium",
@@ -100,6 +112,8 @@ PROFILES: tuple[Profile, ...] = (
         split_prob_range=(0.52, 0.72),
         axis_cycles=(("x", "y", "z"), ("y", "z", "x"), ("z", "x", "y"), ("x", "z", "z", "y")),
         difficulty="hard",
+        min_leaf_count=40,
+        min_target_depth=5,
     ),
     Profile(
         name="stage_07_3d_hard",
@@ -115,6 +129,8 @@ PROFILES: tuple[Profile, ...] = (
             ("y", "x", "z", "z", "y"),
         ),
         difficulty="hard",
+        min_leaf_count=96,
+        min_target_depth=7,
     ),
 )
 
@@ -166,6 +182,14 @@ def _load_base_records() -> list[dict[str, Any]]:
     return records
 
 
+def _meets_profile_floor(record: dict[str, Any], profile: Profile) -> bool:
+    runtime = record["runtime"]
+    return (
+        int(runtime["leaf_count"]) >= profile.min_leaf_count
+        and _target_depth(runtime["target_label"]) >= profile.min_target_depth
+    )
+
+
 def _build_profile_records(profile: Profile, profile_index: int) -> list[dict[str, Any]]:
     from visual_geometry_bench.datagen.half_subdivision_neighbours import generate_dataset_record
 
@@ -196,6 +220,9 @@ def _build_profile_records(profile: Profile, profile_index: int) -> list[dict[st
             difficulty=profile.difficulty,
         )
         attempt += 1
+
+        if not _meets_profile_floor(record, profile):
+            continue
 
         if record["id"] in seen_ids or record["prompt"] in seen_prompts:
             continue
