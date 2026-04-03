@@ -169,10 +169,38 @@ def geometric_credit_sum(
 def shaped_score(labels: list[str], case: GeometryCase, near_contact_credit: float) -> float:
     """Compute the normalized shaped score for one parsed prediction."""
 
+    return score_breakdown(labels, case, near_contact_credit)["score"]
+
+
+def score_breakdown(labels: list[str], case: GeometryCase, near_contact_credit: float) -> dict[str, float]:
+    """Compute normalized reward components for one parsed prediction."""
+
     valid_labels = valid_predictions(labels, case)
-    total_credit = geometric_credit_sum(valid_labels, case, near_contact_credit)
     denominator = max(len(case.truth_labels), len(valid_labels), 1)
-    return min(total_credit / denominator, 1.0)
+    face_hits = 0.0
+    near_hits = 0.0
+
+    for label in valid_labels:
+        credit = contact_credit(
+            case.cells[label],
+            case.cells[case.target_label],
+            case.dimension_count,
+            near_contact_credit,
+        )
+        if credit == 1.0:
+            face_hits += 1.0
+        elif credit > 0.0:
+            near_hits += credit
+
+    total_credit = face_hits + near_hits
+    return {
+        "score": min(total_credit / denominator, 1.0),
+        "face_credit": face_hits / denominator,
+        "near_contact_credit": near_hits / denominator,
+        "valid_prediction_fraction": len(valid_labels) / max(len(labels), 1),
+        "pred_count": float(len(valid_labels)),
+        "truth_count": float(len(case.truth_labels)),
+    }
 
 
 def contact_credit(a: Cell, b: Cell, dimension_count: int, near_contact_credit: float) -> float:

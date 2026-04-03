@@ -14,7 +14,7 @@ if str(ENV_ROOT) not in sys.path:
 
 from half_subdivision_shaped.geometry import (  # noqa: E402
     build_geometry_case,
-    shaped_score,
+    score_breakdown,
 )
 from half_subdivision_shaped.parser import make_parser, parse_labels  # noqa: E402
 
@@ -30,11 +30,19 @@ def compute_score(
     """Compute the shaped reward for one VeRL rollout."""
 
     if data_source != "half_subdivision":
-        return {"score": 0.0}
+        return {"score": 0.0, "parseable": 0.0}
 
     labels = parse_labels(PARSER.parse_answer(solution_str))
     if labels is None:
-        return {"score": 0.0}
+        return {
+            "score": 0.0,
+            "parseable": 0.0,
+            "face_credit": 0.0,
+            "near_contact_credit": 0.0,
+            "valid_prediction_fraction": 0.0,
+            "pred_count": 0.0,
+            "truth_count": float(len(json.loads(ground_truth))),
+        }
 
     case = build_geometry_case(
         {
@@ -43,4 +51,7 @@ def compute_score(
             "runtime": extra_info["runtime"],
         }
     )
-    return {"score": shaped_score(labels, case, near_contact_credit=0.25)}
+    return {
+        "parseable": 1.0,
+        **score_breakdown(labels, case, near_contact_credit=0.25),
+    }

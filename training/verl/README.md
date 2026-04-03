@@ -48,6 +48,15 @@ The reward matches the local shaped env:
 - unrelated: `0.0`
 - normalized by `max(len(truth), len(valid_predictions))`
 
+The VeRL reward hook also returns subscore fields for W&B validation graphs:
+
+- `parseable`
+- `face_credit`
+- `near_contact_credit`
+- `valid_prediction_fraction`
+- `pred_count`
+- `truth_count`
+
 ## VeRL config fields
 
 Point your trainer config at the local parquet files and reward hook:
@@ -130,3 +139,11 @@ first-step startup on the 2x A100 box:
     launcher only budgeted prompt length
 
 The current launcher has already baked these fixes in.
+
+## Validation Cadence
+
+Current VeRL setup validates on the 10-example `half_subdivision_test` slice once
+before training starts.
+
+It is not currently set to re-run validation every `n` steps because the trainer
+is still on `test_freq=-1`.
