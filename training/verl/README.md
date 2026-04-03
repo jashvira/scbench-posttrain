@@ -13,7 +13,11 @@ cd /Users/jashvira/code/scbench-posttrain
 
 ```bash
 cd /Users/jashvira/code/scbench-posttrain
-uv run python training/verl/prepare_half_subdivision_data.py
+uv run python training/verl/prepare_half_subdivision_data.py \
+  --model-path /path/to/Qwen/Qwen3-8B \
+  --max-prompt-length 16384 \
+  --max-response-length 16384 \
+  --total-token-budget 32768
 ```
 
 This writes:
@@ -79,11 +83,12 @@ N_GPUS=2 \
 
 The launcher now:
 
-- regenerates parquet before launch
+- regenerates parquet before launch using the actual model tokenizer
 - exports `REPO_ROOT`, `MODEL_PATH`, and `RUN_DIR` for the Hydra config
 - auto-detects GPU count if `N_GPUS` is unset
 - starts with conservative defaults for first bring-up: `ROLLOUT_N=4`, `TRAIN_BATCH_SIZE=32`, `VAL_BATCH_SIZE=64`, `MAX_PROMPT_LENGTH=16384`, `MAX_RESPONSE_LENGTH=16384`
 - sets `TOTAL_TOKEN_BUDGET=MAX_PROMPT_LENGTH+MAX_RESPONSE_LENGTH` for actor PPO and rollout log-prob passes, which VeRL needs because those paths see full prompt-plus-response sequences
+- writes already-filtered parquet rows, instead of relying only on VeRL's prompt-only overlength filter
 - creates writable runtime dirs for `XDG_CONFIG_HOME`, `XDG_CACHE_HOME`, and `MPLCONFIGDIR` under the repo so vLLM and matplotlib do not crash on locked-down GPU boxes
 
 Override as needed with:

@@ -34,7 +34,11 @@ MPLCONFIGDIR="${MPLCONFIGDIR:-$XDG_CACHE_HOME/matplotlib}"
 
 cd "$REPO_ROOT"
 
-"$PYTHON_BIN" training/verl/prepare_half_subdivision_data.py
+"$PYTHON_BIN" training/verl/prepare_half_subdivision_data.py \
+  --model-path "$MODEL_PATH" \
+  --max-prompt-length "$MAX_PROMPT_LENGTH" \
+  --max-response-length "$MAX_RESPONSE_LENGTH" \
+  --total-token-budget "$TOTAL_TOKEN_BUDGET"
 
 export HYDRA_FULL_ERROR=1
 export REPO_ROOT
