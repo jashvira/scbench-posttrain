@@ -11,7 +11,7 @@ from inspect_ai.model import ChatMessageUser, ModelOutput
 from inspect_ai.solver import TaskState
 
 from evals.vgb import vgb_score, vgb_task
-from scbench_posttrain.vgb import VGBTask, log_prompt_artifacts
+from scbench_posttrain.vgb import VGBTask, load_vgb_task, log_prompt_artifacts
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -115,6 +115,19 @@ def test_delaunay_visuals_log_to_transcript(monkeypatch):
         "### Task visual\n\n![Task visual](data:image/png;base64,AAAA)",
         "scorer",
     )
+
+
+def test_half_subdivision_curriculum_is_unique_and_ordered():
+    task = load_vgb_task("half_subdivision")
+
+    ids = [record["id"] for record in task.records]
+    curriculum_indices = [record["metadata"]["curriculum_index"] for record in task.records]
+    curriculum_scores = [record["metadata"]["curriculum_score"] for record in task.records]
+
+    assert len(task.records) == 300
+    assert len(ids) == len(set(ids))
+    assert curriculum_indices == list(range(300))
+    assert curriculum_scores == sorted(curriculum_scores)
 
 
 def test_repo_no_longer_references_scbench_surface():

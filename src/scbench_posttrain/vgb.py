@@ -16,7 +16,8 @@ from typing import Any
 from inspect_ai.dataset import MemoryDataset, Sample
 from inspect_ai.log import transcript
 
-VGB_ROOT = Path(__file__).resolve().parents[2] / "external" / "VisGeomBench"
+REPO_ROOT = Path(__file__).resolve().parents[2]
+VGB_ROOT = REPO_ROOT / "external" / "VisGeomBench"
 VGB_LOCK = RLock()
 VGB_TASKS: dict[str, tuple[str, str]] = {
     "topology_enumeration": ("topology_enumeration_curated.toml", "Topology Enumeration"),
@@ -26,7 +27,7 @@ VGB_TASKS: dict[str, tuple[str, str]] = {
     "delaunay": ("delaunay_dataset.toml", "Delaunay Triangulation"),
     "two_segments": ("two_segments_curated.toml", "Two Segments"),
     "shikaku": ("shikaku_curated.toml", "Shikaku Rectangles"),
-    "half_subdivision": ("half_subdivision.toml", "Half Subdivision Neighbours"),
+    "half_subdivision": ("data/half_subdivision_curriculum.jsonl", "Half Subdivision Neighbours"),
 }
 
 
@@ -74,24 +75,36 @@ def _build_dataset(name: str, title: str, records: list[dict[str, Any]]) -> Memo
     return MemoryDataset(samples=samples, name=f"vgb_{name}")
 
 
-def _load_records(config_name: str) -> list[dict[str, Any]]:
+def _resolve_task_source(source_name: str) -> Path:
+    local_path = REPO_ROOT / source_name
+    if local_path.exists():
+        return local_path
+    return VGB_ROOT / "configs" / source_name
+
+
+def _load_records(source_name: str) -> list[dict[str, Any]]:
+    source_path = _resolve_task_source(source_name)
+    if source_path.suffix == ".jsonl":
+        with source_path.open(encoding="utf-8") as handle:
+            return [json.loads(line) for line in handle if line.strip()]
+
     with vgb_runtime():
         from visual_geometry_bench.dataset import build_records_from_config, load_config
 
-        config = load_config(VGB_ROOT / "configs" / config_name)
+        config = load_config(source_path)
         return build_records_from_config(config)
 
 
 @lru_cache(maxsize=None)
 def _load_vgb_task_cached(name: str) -> VGBTask:
     try:
-        config_name, title = VGB_TASKS[name]
+        source_name, title = VGB_TASKS[name]
     except KeyError as exc:
         raise ValueError(
             f"Unknown VGB task {name!r}. Available tasks: {', '.join(sorted(VGB_TASKS))}"
         ) from exc
 
-    records = _load_records(config_name)
+    records = _load_records(source_name)
     return VGBTask(
         name=name,
         title=title,
