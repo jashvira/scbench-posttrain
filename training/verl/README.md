@@ -98,3 +98,30 @@ Override as needed with:
 - `MAX_RESPONSE_LENGTH`
 - `TOTAL_TOKEN_BUDGET`
 - `GPU_MEMORY_UTILIZATION`
+
+## Stability Notes
+
+These were the fixes that actually mattered for getting a dummy GRPO run through
+first-step startup on the 2x A100 box:
+
+- use VeRL's base `ppo_trainer` config directly; the local task setup is applied
+  as CLI overrides by the launcher
+- keep `flash-attn` installed and use `bfloat16` for actor/ref model dtype
+- kill any manual eval `vllm` server before training; VeRL starts its own rollout
+  backend
+- budget tokens for full sequence length, not just prompt length:
+  `TOTAL_TOKEN_BUDGET = MAX_PROMPT_LENGTH + MAX_RESPONSE_LENGTH`
+- pass that total budget into:
+  - `actor_rollout_ref.actor.ppo_max_token_len_per_gpu`
+  - `actor_rollout_ref.rollout.log_prob_max_token_len_per_gpu`
+  - `actor_rollout_ref.rollout.max_num_batched_tokens`
+- create writable runtime dirs on the box:
+  - `XDG_CONFIG_HOME`
+  - `XDG_CACHE_HOME`
+  - `MPLCONFIGDIR`
+- the old failure was:
+  - `AssertionError: max_token_len must be greater than the sequence length`
+  - this happened because VeRL log-prob saw prompt plus response, while the old
+    launcher only budgeted prompt length
+
+The current launcher has already baked these fixes in.
