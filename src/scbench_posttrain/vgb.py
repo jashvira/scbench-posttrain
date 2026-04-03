@@ -67,6 +67,7 @@ def _build_dataset(name: str, title: str, records: list[dict[str, Any]]) -> Memo
                 "title": title,
                 "record_id": str(record.get("id", f"{name}:{index}")),
                 "record_index": index,
+                "source_record_index": index,
                 "problem_type": str(record.get("metadata", {}).get("problem_type", "")),
             },
         )
@@ -118,6 +119,43 @@ def load_vgb_task(name: str) -> VGBTask:
 
 
 load_vgb_task.cache_clear = _load_vgb_task_cached.cache_clear
+
+
+def slice_vgb_task(task: VGBTask, indices: list[int]) -> VGBTask:
+    source_count = len(task.records)
+    if not indices:
+        raise ValueError("record_indices must not be empty")
+
+    selected_records: list[dict[str, Any]] = []
+    samples: list[Sample] = []
+    for local_index, source_index in enumerate(indices):
+        if source_index < 0 or source_index >= source_count:
+            raise ValueError(
+                f"record index {source_index} out of range for {task.name!r} (0..{source_count - 1})"
+            )
+        record = task.records[source_index]
+        selected_records.append(record)
+        samples.append(
+            Sample(
+                input=record["prompt"],
+                id=str(record.get("id", f"{task.name}:{source_index}")),
+                metadata={
+                    "name": task.name,
+                    "title": task.title,
+                    "record_id": str(record.get("id", f"{task.name}:{source_index}")),
+                    "record_index": local_index,
+                    "source_record_index": source_index,
+                    "problem_type": str(record.get("metadata", {}).get("problem_type", "")),
+                },
+            )
+        )
+
+    return VGBTask(
+        name=task.name,
+        title=task.title,
+        dataset=MemoryDataset(samples=samples, name=f"vgb_{task.name}"),
+        records=tuple(selected_records),
+    )
 
 
 def extract_vgb_answer(completion: str) -> str | None:

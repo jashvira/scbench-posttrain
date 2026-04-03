@@ -49,8 +49,17 @@ def test_vgb_task_builds_memory_dataset():
         "title": "Topology Enumeration",
         "record_id": inspect_task.dataset[0].id,
         "record_index": 0,
+        "source_record_index": 0,
         "problem_type": "topology_enumeration",
     }
+
+
+def test_vgb_task_can_slice_explicit_record_indices():
+    inspect_task = vgb_task("half_subdivision", record_indices="0,47,192")
+
+    assert len(inspect_task.dataset) == 3
+    assert [sample.metadata["source_record_index"] for sample in inspect_task.dataset] == [0, 47, 192]
+    assert [sample.metadata["record_index"] for sample in inspect_task.dataset] == [0, 1, 2]
 
 
 def test_delaunay_prompt_uses_exact_points():

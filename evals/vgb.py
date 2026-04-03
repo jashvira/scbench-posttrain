@@ -16,6 +16,7 @@ from scbench_posttrain.vgb import (
     load_vgb_task,
     log_prompt_artifacts,
     log_score_artifacts,
+    slice_vgb_task,
 )
 
 DEFAULT_GENERATE_CONFIG = GenerateConfig(
@@ -331,9 +332,14 @@ def vgb_score(vgb_task: VGBTask):
 @task
 def vgb_task(
     name: str,
+    record_indices: str | None = None,
     solver: Solver | None = None,
 ) -> Task:
     loaded_task = load_vgb_task(name)
+    selected_indices: list[int] | None = None
+    if record_indices is not None:
+        selected_indices = [int(part.strip()) for part in record_indices.split(",") if part.strip()]
+        loaded_task = slice_vgb_task(loaded_task, selected_indices)
     task_name = f"vgb_{loaded_task.name}"
     return Task(
         dataset=loaded_task.dataset,
@@ -346,6 +352,7 @@ def vgb_task(
             "name": loaded_task.name,
             "title": loaded_task.title,
             "task_name": task_name,
+            "record_indices": selected_indices,
             "generate_config": DEFAULT_GENERATE_CONFIG.model_dump(exclude_none=True),
         },
     )
