@@ -104,12 +104,16 @@ The smoke path keeps only the first easy records and shortens the sequence budge
 - `TRAIN_LIMIT=16`
 - `VAL_LIMIT=4`
 - `ROLLOUT_N=2`
-- `TRAIN_BATCH_SIZE=2`
+- `TRAIN_BATCH_SIZE=4`
 - `VAL_BATCH_SIZE=4`
 - `MAX_PROMPT_LENGTH=4096`
 - `MAX_RESPONSE_LENGTH=2048`
 - `TEST_FREQ=10`
 - writes parquet under `training/verl/data-smoke/`
+
+Keep `TRAIN_BATCH_SIZE * ROLLOUT_N` divisible by the rollout worker count. On the
+current 2x A100 setup, `2 x 2 = 4` was too small and tripped VeRL's equal-chunk
+assertion; `4 x 2 = 8` is the safe floor.
 
 The launcher now:
 
