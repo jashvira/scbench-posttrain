@@ -27,6 +27,10 @@ VAL_BATCH_SIZE="${VAL_BATCH_SIZE:-64}"
 MAX_PROMPT_LENGTH="${MAX_PROMPT_LENGTH:-16384}"
 MAX_RESPONSE_LENGTH="${MAX_RESPONSE_LENGTH:-1024}"
 GPU_MEMORY_UTILIZATION="${GPU_MEMORY_UTILIZATION:-0.8}"
+TOTAL_TOKEN_BUDGET="${TOTAL_TOKEN_BUDGET:-$((MAX_PROMPT_LENGTH + MAX_RESPONSE_LENGTH))}"
+XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$REPO_ROOT/.runtime-config}"
+XDG_CACHE_HOME="${XDG_CACHE_HOME:-$REPO_ROOT/.runtime-cache}"
+MPLCONFIGDIR="${MPLCONFIGDIR:-$XDG_CACHE_HOME/matplotlib}"
 
 cd "$REPO_ROOT"
 
@@ -36,6 +40,11 @@ export HYDRA_FULL_ERROR=1
 export REPO_ROOT
 export MODEL_PATH
 export RUN_DIR
+export XDG_CONFIG_HOME
+export XDG_CACHE_HOME
+export MPLCONFIGDIR
+
+mkdir -p "$RUN_DIR" "$XDG_CONFIG_HOME" "$XDG_CACHE_HOME" "$MPLCONFIGDIR"
 
 "$PYTHON_BIN" -m verl.trainer.main_ppo \
   --config-name=ppo_trainer \
@@ -57,13 +66,15 @@ export RUN_DIR
   actor_rollout_ref.model.use_remove_padding=true \
   actor_rollout_ref.rollout.tensor_model_parallel_size="$ROLLOUT_TP_SIZE" \
   actor_rollout_ref.rollout.n="$ROLLOUT_N" \
+  actor_rollout_ref.rollout.prompt_length="$MAX_PROMPT_LENGTH" \
+  actor_rollout_ref.rollout.response_length="$MAX_RESPONSE_LENGTH" \
   actor_rollout_ref.rollout.gpu_memory_utilization="$GPU_MEMORY_UTILIZATION" \
   actor_rollout_ref.actor.strategy=fsdp \
   actor_rollout_ref.actor.optim.lr=1e-6 \
   actor_rollout_ref.actor.ppo_mini_batch_size=16 \
   actor_rollout_ref.actor.ppo_micro_batch_size_per_gpu=4 \
   actor_rollout_ref.actor.use_dynamic_bsz=true \
-  actor_rollout_ref.actor.ppo_max_token_len_per_gpu="$MAX_PROMPT_LENGTH" \
+  actor_rollout_ref.actor.ppo_max_token_len_per_gpu="$TOTAL_TOKEN_BUDGET" \
   actor_rollout_ref.actor.use_kl_loss=true \
   actor_rollout_ref.actor.kl_loss_coef=0.001 \
   actor_rollout_ref.actor.kl_loss_type=low_var_kl \
@@ -75,11 +86,13 @@ export RUN_DIR
   actor_rollout_ref.ref.fsdp_config.model_dtype=bfloat16 \
   actor_rollout_ref.ref.fsdp_config.param_offload=false \
   actor_rollout_ref.rollout.name=vllm \
+  actor_rollout_ref.rollout.log_prob_use_dynamic_bsz=true \
+  actor_rollout_ref.rollout.log_prob_max_token_len_per_gpu="$TOTAL_TOKEN_BUDGET" \
   actor_rollout_ref.rollout.temperature=0.7 \
   actor_rollout_ref.rollout.top_p=0.95 \
   actor_rollout_ref.rollout.top_k=-1 \
   actor_rollout_ref.rollout.log_prob_micro_batch_size_per_gpu=4 \
-  actor_rollout_ref.rollout.max_num_batched_tokens="$MAX_PROMPT_LENGTH" \
+  actor_rollout_ref.rollout.max_num_batched_tokens="$TOTAL_TOKEN_BUDGET" \
   custom_reward_function.path="$REPO_ROOT/training/verl/half_subdivision_reward.py" \
   custom_reward_function.name=compute_score \
   trainer.n_gpus_per_node="$N_GPUS"
