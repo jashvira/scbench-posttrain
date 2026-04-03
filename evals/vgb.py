@@ -1,43 +1,38 @@
-from __future__ import annotations
-
 import json
 import os
-from pathlib import Path
 from typing import Any
 
 from inspect_ai import Task, task
-from inspect_ai.dataset import Sample, json_dataset
-from inspect_ai.model import (
-    ChatMessageAssistant,
-    GenerateConfig,
-    ModelOutput,
-)
-from inspect_ai.scorer import Score, scorer
+from inspect_ai.model import ChatMessageAssistant, GenerateConfig, ModelOutput
+from inspect_ai.scorer import Score, mean, scorer
 from inspect_ai.solver import Generate, Solver, TaskState, generate, solver
 from inspect_ai.util import StoreModel
 from pydantic import Field
 
-from scbench_posttrain.delaunay import (
-    DelaunayRecord,
-    DelaunaySampleMetadata,
-    render_delaunay_prompt_image,
-    score_delaunay_answer,
+from scbench_posttrain.vgb import (
+    VGBTask,
+    extract_vgb_answer,
+    grade_vgb_answer,
+    load_vgb_task,
+    log_prompt_artifacts,
+    log_score_artifacts,
 )
 
-DEFAULT_DATASET_PATH = Path(__file__).resolve().parents[1] / "data" / "delaunay_pilot.jsonl"
 DEFAULT_GENERATE_CONFIG = GenerateConfig(
     max_retries=0,
     timeout=960,
     attempt_timeout=900,
     reasoning_summary="concise",
-    reasoning_effort="high",
+    reasoning_effort="xhigh",
     max_tokens=32768,
-    verbosity="low",
+    verbosity="medium",
 )
-DEFAULT_GENERATE_CONFIG_METADATA = DEFAULT_GENERATE_CONFIG.model_dump(exclude_none=True)
 
 
-class DelaunayRunStore(StoreModel):
+class VGBRunStore(StoreModel):
+    """Per-sample runtime data for the generic VGB solver arms."""
+
+    name: str | None = None
     arm: str = "direct"
     rlm_execution_time_seconds: float | None = None
     usage_summary: dict[str, Any] = Field(default_factory=dict)
@@ -46,9 +41,6 @@ class DelaunayRunStore(StoreModel):
     rlm_model_name: str | None = None
     rlm_trace: dict[str, Any] = Field(default_factory=dict)
     rlm_run_config: dict[str, Any] = Field(default_factory=dict)
-
-
-DelaunayRunStore.model_rebuild()
 
 
 def _json_safe(value: Any) -> Any:
@@ -92,50 +84,6 @@ def _merge_usage_summaries(usages: list[dict[str, Any]]) -> dict[str, Any]:
     return result
 
 
-def _delaunay_record(state: TaskState, metadata: DelaunaySampleMetadata) -> dict[str, Any]:
-    """Rebuild the verifier record shape for a sample from Inspect state."""
-
-    return {
-        "id": metadata.record_id,
-        "prompt": state.input_text,
-        "ground_truth": metadata.ground_truth,
-        "metadata": {
-            "problem_type": metadata.problem_type,
-            "difficulty": metadata.difficulty,
-            "tags": metadata.tags,
-        },
-        "datagen_args": metadata.datagen_args,
-    }
-
-
-def record_to_sample(record: dict[str, Any]) -> Sample:
-    """Map a frozen JSONL record into a normal Inspect sample."""
-
-    validated = DelaunayRecord.model_validate(record)
-    metadata = DelaunaySampleMetadata(
-        record_id=validated.id,
-        problem_type=validated.metadata.problem_type,
-        difficulty=validated.metadata.difficulty,
-        tags=validated.metadata.tags,
-        ground_truth=validated.ground_truth,
-        datagen_args=validated.datagen_args,
-    )
-    sample_metadata = metadata.model_dump(mode="json")
-    sample_metadata["prompt_image"] = render_delaunay_prompt_image(validated.datagen_args)
-    return Sample(
-        input=validated.prompt,
-        target=json.dumps(validated.ground_truth),
-        id=validated.id,
-        metadata=sample_metadata,
-    )
-
-
-def load_delaunay_dataset(dataset_path: str | Path = DEFAULT_DATASET_PATH):
-    """Load the frozen pilot dataset with Inspect's native JSON reader."""
-
-    return json_dataset(str(dataset_path), sample_fields=record_to_sample, name="delaunay_pilot")
-
-
 def _resolve_rlm_model_name(state: TaskState, override: str | None) -> str:
     """Resolve the model name to pass through to RLM."""
 
@@ -156,7 +104,7 @@ def _resolve_rlm_model_name(state: TaskState, override: str | None) -> str:
 
 
 def _rlm_root_prompt(arm: str) -> str:
-    """Return the control prompt for an RLM solver arm."""
+    """Return the generic control prompt for a VGB RLM solver arm."""
 
     guidance = (
         "Use the local Python REPL and built-in query helpers if useful. "
@@ -165,12 +113,40 @@ def _rlm_root_prompt(arm: str) -> str:
         else "Use the local Python REPL and recursive LM helpers if useful."
     )
     return (
-        "Solve the Delaunay task in `context`. "
+        "Solve the VGB task in `context`. "
         f"{guidance} "
-        "Do not call FINAL or FINAL_VAR until you have the actual triangulation. "
+        "`context` already contains the full task prompt text. "
+        "Any `repl` block you emit is executed automatically by the environment. "
+        "Its stdout/stderr is returned to you in later iterations. "
+        "There is no human in the loop during execution. "
+        "Never ask the user to run code, provide REPL output, or continue the interaction. "
+        "Do not call FINAL or FINAL_VAR until you have the actual final answer. "
         "If you are still inspecting `context` or testing code, continue iterating. "
+        "Do not emit an inspection `repl` block and then finalize in the same response. "
         "Never finalize with a request for more work, a next-step note, or any other non-answer text. "
-        "When you have the final triangulation, assign it to a variable and return it with FINAL_VAR."
+        "Return only the final answer in the exact literal format requested in `context`, with no markdown fences or surrounding prose. "
+        "When you have the final answer, assign it to a variable and return it with FINAL_VAR."
+    )
+
+
+def _needs_repair(completion: str) -> bool:
+    """Detect malformed meta-finalizations that should get one more RLM pass."""
+
+    if extract_vgb_answer(completion) is None:
+        return True
+
+    lowered = completion.lower()
+    return any(
+        pattern in lowered
+        for pattern in (
+            "please run the repl",
+            "run the repl inspection",
+            "unable to access the repl output",
+            "can't access the repl output",
+            "cannot access the repl output",
+            "provide repl output",
+            "continue the interaction",
+        )
     )
 
 
@@ -182,7 +158,7 @@ async def _run_rlm_arm(
     max_iterations: int,
     max_depth: int,
 ) -> TaskState:
-    """Run one RLM-backed solver arm and write its completion into Inspect state."""
+    """Run one generic RLM-backed solver arm and write its completion into Inspect state."""
 
     try:
         from rlm import RLM
@@ -190,20 +166,24 @@ async def _run_rlm_arm(
     except ImportError as exc:
         raise RuntimeError(
             "RLM solvers require the `rlm` package in the current environment. "
-            "Install it before using `delaunay_rlm_repl` or `delaunay_rlm_full`."
+            "Install it before using `vgb_rlm_repl` or `vgb_rlm_full`."
         ) from exc
 
+    loaded_task = load_vgb_task(str(state.metadata["name"]))
+    record = loaded_task.records[int(state.metadata["record_index"])]
+    log_prompt_artifacts(record)
     resolved_model_name = _resolve_rlm_model_name(state, rlm_model_name)
     backend_kwargs: dict[str, Any] = {"model_name": resolved_model_name}
     if api_key := os.getenv("OPENAI_API_KEY"):
         backend_kwargs["api_key"] = api_key
     if base_url := os.getenv("OPENAI_BASE_URL"):
         backend_kwargs["base_url"] = base_url
+
     logger = RLMLogger()
-    store = state.store_as(DelaunayRunStore)
+    store = state.store_as(VGBRunStore)
+    store.name = loaded_task.name
     store.arm = arm
     store.rlm_model_name = resolved_model_name
-    record = _delaunay_record(state, state.metadata_as(DelaunaySampleMetadata))
 
     rlm_kwargs: dict[str, Any] = {
         "backend": "openai",
@@ -221,6 +201,7 @@ async def _run_rlm_arm(
     root_prompt = _rlm_root_prompt(arm)
     store.rlm_run_config = _json_safe(
         {
+            "name": loaded_task.name,
             "arm": arm,
             "backend": rlm_kwargs["backend"],
             "environment": rlm_kwargs["environment"],
@@ -232,20 +213,30 @@ async def _run_rlm_arm(
             "repair_attempted": False,
         }
     )
+
     runner = RLM(**rlm_kwargs)
-    completion = runner.completion(prompt_context, root_prompt=root_prompt)
-    completions = [completion]
-    evaluation = score_delaunay_answer(completion.response, record)
-    if not evaluation.passed and evaluation.error_type != "exact_mismatch":
-        repair_prompt = (
-            f"{root_prompt} "
-            "Your previous completion was not a valid triangulation. "
-            "Do not ask for more work or describe your next step. "
-            "Continue using the REPL and only finalize with the triangulation itself."
-        )
-        completion = runner.completion(prompt_context, root_prompt=repair_prompt)
+    completions = []
+    prompt = root_prompt
+    max_repairs = 2
+    repairs = 0
+
+    while True:
+        completion = runner.completion(prompt_context, root_prompt=prompt)
         completions.append(completion)
+        if not _needs_repair(completion.response) or repairs >= max_repairs:
+            break
+
+        repairs += 1
         store.rlm_run_config["repair_attempted"] = True
+        prompt = (
+            f"{root_prompt} "
+            "Your previous completion was not a valid final answer for this task. "
+            "The environment already executed any `repl` blocks you emitted. "
+            "You must not ask the user to run code or provide REPL output. "
+            "Do not finalize in the same response as a first-pass inspection block. "
+            "Inspect `context`, wait for the resulting REPL output in the next iteration, "
+            "and only finalize once you have the actual final answer in the required format."
+        )
 
     traces = [_json_safe(item.metadata or {}) for item in completions if item.metadata]
     store.rlm_execution_time_seconds = sum(item.execution_time for item in completions)
@@ -266,27 +257,31 @@ async def _run_rlm_arm(
 
 
 @solver
-def delaunay_direct():
-    """Run the default Inspect generation path for Delaunay."""
+def vgb_direct():
+    """Run the default Inspect generation path for VGB."""
 
     direct_generate = generate()
 
     async def solve(state: TaskState, generate: Generate) -> TaskState:
         """Tag the run as direct generation before delegating to Inspect."""
 
-        store = state.store_as(DelaunayRunStore)
+        loaded_task = load_vgb_task(str(state.metadata["name"]))
+        record = loaded_task.records[int(state.metadata["record_index"])]
+        store = state.store_as(VGBRunStore)
+        store.name = loaded_task.name
         store.arm = "direct"
+        log_prompt_artifacts(record)
         return await direct_generate(state, generate)
 
     return solve
 
 
 @solver
-def delaunay_rlm_repl(
+def vgb_rlm_repl(
     max_iterations: int = 12,
     rlm_model_name: str | None = None,
 ):
-    """Run Delaunay through native shallow RLM with a local REPL."""
+    """Run one VGB sample through native shallow RLM with a local REPL."""
 
     async def solve(state: TaskState, generate: Generate) -> TaskState:
         """Execute the shallow RLM arm for one sample."""
@@ -304,12 +299,12 @@ def delaunay_rlm_repl(
 
 
 @solver
-def delaunay_rlm_full(
+def vgb_rlm_full(
     max_iterations: int = 12,
     max_depth: int = 2,
     rlm_model_name: str | None = None,
 ):
-    """Run Delaunay through native recursive RLM."""
+    """Run one VGB sample through native recursive RLM."""
 
     async def solve(state: TaskState, generate: Generate) -> TaskState:
         """Execute the full RLM arm for one sample."""
@@ -326,38 +321,37 @@ def delaunay_rlm_full(
     return solve
 
 
-@scorer(metrics=[])
-def delaunay_exact():
-    """Score one completion with the shared exact Delaunay verifier."""
+@scorer(metrics=[mean()])
+def vgb_score(vgb_task: VGBTask):
+    """Score one completion with the VGB verifier for that record."""
 
     async def score(state: TaskState, target: Any) -> Score:
-        """Parse and score one sample output, then attach run metadata."""
+        """Run the VGB verifier on the current model output."""
 
         del target
-        metadata = state.metadata_as(DelaunaySampleMetadata)
-        store = state.store_as(DelaunayRunStore)
-        evaluation = score_delaunay_answer(
-            state.output.completion if state.output is not None else "",
-            _delaunay_record(state, metadata),
-        )
+        completion = state.output.completion if state.output is not None else ""
+        record = vgb_task.records[int(state.metadata["record_index"])]
+        value, score_metadata, parsed_answer = grade_vgb_answer(record, completion)
+        if parsed_answer is not None:
+            log_score_artifacts(record, parsed_answer)
+        store = state.store_as(VGBRunStore)
 
         return Score(
-            value=evaluation.score,
-            answer=evaluation.extracted_literal,
+            value=float(value),
+            answer=completion,
             metadata={
-                "parsed_ok": evaluation.parsed_ok,
-                "passed": evaluation.passed,
-                "error_type": evaluation.error_type,
-                "problem_type": metadata.problem_type,
-                "difficulty": metadata.difficulty,
+                "name": state.metadata["name"],
+                "title": state.metadata["title"],
+                "record_id": state.metadata["record_id"],
+                "record_index": state.metadata["record_index"],
+                "problem_type": state.metadata["problem_type"],
                 "arm": store.arm,
-                "missing": evaluation.missing,
-                "extra": evaluation.extra,
                 "rlm_execution_time_seconds": store.rlm_execution_time_seconds,
                 "trajectory_present": store.trajectory_present,
                 "trajectory_iterations": store.trajectory_iterations,
                 "usage_summary": store.usage_summary,
                 "rlm_model_name": store.rlm_model_name,
+                **score_metadata,
             },
         )
 
@@ -365,16 +359,25 @@ def delaunay_exact():
 
 
 @task
-def delaunay_pilot(
+def vgb_task(
+    name: str,
     solver: Solver | None = None,
-    dataset_path: str | Path = DEFAULT_DATASET_PATH,
 ) -> Task:
-    """Build the Inspect task for the frozen Delaunay pilot split."""
+    """Build an Inspect task from one VGB config bundle."""
 
+    loaded_task = load_vgb_task(name)
+    task_name = f"vgb_{loaded_task.name}"
     return Task(
-        dataset=load_delaunay_dataset(dataset_path),
-        solver=solver or delaunay_direct(),
-        scorer=delaunay_exact(),
+        dataset=loaded_task.dataset,
+        solver=solver or vgb_direct(),
+        scorer=vgb_score(loaded_task),
         config=DEFAULT_GENERATE_CONFIG,
-        metadata={"generate_config": DEFAULT_GENERATE_CONFIG_METADATA},
+        name=task_name,
+        display_name=loaded_task.title,
+        metadata={
+            "name": loaded_task.name,
+            "title": loaded_task.title,
+            "task_name": task_name,
+            "generate_config": DEFAULT_GENERATE_CONFIG.model_dump(exclude_none=True),
+        },
     )

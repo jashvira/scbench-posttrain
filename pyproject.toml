@@ -5,14 +5,21 @@ build-backend = "hatchling.build"
 [project]
 name = "scbench-posttrain"
 version = "0.1.0"
-description = "Inspect-native Delaunay eval pilot"
+description = "Inspect-native VGB evals with generic RLM tracing"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+  "scad-format>=1.0.0",
+  "filelock>=3.12",
+  "matplotlib>=3.9",
   "numpy>=2.1",
   "openai>=2.28.0",
   "pydantic>=2.8",
+  "shapely>=2.1.2",
   "scipy>=1.14",
+  "treelib>=1.7",
+  "trimesh>=4.11.3",
+  "verifiers>=0.1.7.post0",
 ]
 
 [dependency-groups]
@@ -25,9 +32,15 @@ dev = [
 inspect = [
   "inspect-ai>=0.3",
 ]
+rlm = [
+  "rlms @ git+https://github.com/alexzhang13/rlm.git@2e5764b13963dfa4e2ff6ee88d9a302a392c9896",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/scbench_posttrain"]
+
+[tool.hatch.metadata]
+allow-direct-references = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

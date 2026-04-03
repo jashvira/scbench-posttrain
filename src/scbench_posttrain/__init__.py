@@ -1,1 +1,1 @@
-"""scbench-posttrain."""
+"""VGB-native Inspect evaluation helpers."""
