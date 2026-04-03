@@ -90,9 +90,31 @@ N_GPUS=2 \
 ./scripts/run_verl_grpo_half_subdivision.sh
 ```
 
+For fail-fast bring-up, use the smoke wrapper instead:
+
+```bash
+cd /Users/jashvira/code/scbench-posttrain
+MODEL_PATH=/path/to/Qwen/Qwen3-8B \
+N_GPUS=2 \
+./scripts/run_verl_grpo_half_subdivision_smoke.sh
+```
+
+The smoke path keeps only the first easy records and shortens the sequence budget:
+
+- `TRAIN_LIMIT=16`
+- `VAL_LIMIT=4`
+- `ROLLOUT_N=2`
+- `TRAIN_BATCH_SIZE=2`
+- `VAL_BATCH_SIZE=4`
+- `MAX_PROMPT_LENGTH=4096`
+- `MAX_RESPONSE_LENGTH=2048`
+- `TEST_FREQ=10`
+- writes parquet under `training/verl/data-smoke/`
+
 The launcher now:
 
 - regenerates parquet before launch using the actual model tokenizer
+- can slice the parquet with `TRAIN_LIMIT` and `VAL_LIMIT`
 - exports `REPO_ROOT`, `MODEL_PATH`, and `RUN_DIR` for the Hydra config
 - auto-detects GPU count if `N_GPUS` is unset
 - starts with conservative defaults for first bring-up: `ROLLOUT_N=4`, `TRAIN_BATCH_SIZE=32`, `VAL_BATCH_SIZE=64`, `MAX_PROMPT_LENGTH=16384`, `MAX_RESPONSE_LENGTH=16384`

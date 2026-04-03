@@ -117,10 +117,16 @@ def main() -> None:
     parser.add_argument("--max-prompt-length", type=int, default=None)
     parser.add_argument("--max-response-length", type=int, default=None)
     parser.add_argument("--total-token-budget", type=int, default=None)
+    parser.add_argument("--train-limit", type=int, default=None)
+    parser.add_argument("--val-limit", type=int, default=None)
     args = parser.parse_args()
 
     train_records = load_jsonl(DATASETS["half_subdivision"])
     val_records = load_jsonl(DATASETS["half_subdivision_test"])
+    if args.train_limit is not None:
+        train_records = train_records[: args.train_limit]
+    if args.val_limit is not None:
+        val_records = val_records[: args.val_limit]
 
     train_rows = filter_rows(
         to_verl_rows(train_records, data_source="half_subdivision", split="train"),
