@@ -82,7 +82,7 @@ The launcher now:
 - regenerates parquet before launch
 - exports `REPO_ROOT`, `MODEL_PATH`, and `RUN_DIR` for the Hydra config
 - auto-detects GPU count if `N_GPUS` is unset
-- starts with conservative defaults for first bring-up: `ROLLOUT_N=4`, `TRAIN_BATCH_SIZE=32`, `VAL_BATCH_SIZE=64`, `MAX_PROMPT_LENGTH=16384`, `MAX_RESPONSE_LENGTH=1024`
+- starts with conservative defaults for first bring-up: `ROLLOUT_N=4`, `TRAIN_BATCH_SIZE=32`, `VAL_BATCH_SIZE=64`, `MAX_PROMPT_LENGTH=16384`, `MAX_RESPONSE_LENGTH=16384`
 - sets `TOTAL_TOKEN_BUDGET=MAX_PROMPT_LENGTH+MAX_RESPONSE_LENGTH` for actor PPO and rollout log-prob passes, which VeRL needs because those paths see full prompt-plus-response sequences
 - creates writable runtime dirs for `XDG_CONFIG_HOME`, `XDG_CACHE_HOME`, and `MPLCONFIGDIR` under the repo so vLLM and matplotlib do not crash on locked-down GPU boxes
 

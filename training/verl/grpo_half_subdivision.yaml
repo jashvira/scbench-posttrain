@@ -8,8 +8,8 @@ data:
   prompt_key: prompt
   train_batch_size: 64
   val_batch_size: 128
-  max_prompt_length: 8192
-  max_response_length: 1024
+  max_prompt_length: 16384
+  max_response_length: 16384
   truncation: error
   filter_overlong_prompts: true
 
@@ -30,7 +30,7 @@ actor_rollout_ref:
     ppo_mini_batch_size: 16
     ppo_micro_batch_size_per_gpu: 4
     use_dynamic_bsz: true
-    ppo_max_token_len_per_gpu: 16384
+    ppo_max_token_len_per_gpu: 32768
     use_kl_loss: true
     kl_loss_coef: 0.001
     kl_loss_type: low_var_kl
@@ -53,7 +53,7 @@ actor_rollout_ref:
     top_k: -1
     n: 8
     log_prob_micro_batch_size_per_gpu: 4
-    max_num_batched_tokens: 16384
+    max_num_batched_tokens: 32768
     val_kwargs:
       do_sample: true
       temperature: 0.7
