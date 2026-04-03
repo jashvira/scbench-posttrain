@@ -58,3 +58,24 @@ custom_reward_function:
   path: /Users/jashvira/code/scbench-posttrain/training/verl/half_subdivision_reward.py
   name: compute_score
 ```
+
+## Launch
+
+Use the provided script on the GPU box:
+
+```bash
+cd /Users/jashvira/code/scbench-posttrain
+MODEL_PATH=/path/to/Qwen/Qwen3-8B \
+N_GPUS=1 \
+./scripts/run_verl_grpo_half_subdivision.sh
+```
+
+Override as needed with:
+
+- `RUN_DIR`
+- `ROLLOUT_N`
+- `TRAIN_BATCH_SIZE`
+- `VAL_BATCH_SIZE`
+- `MAX_PROMPT_LENGTH`
+- `MAX_RESPONSE_LENGTH`
+- `GPU_MEMORY_UTILIZATION`
