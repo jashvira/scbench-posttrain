@@ -62,6 +62,13 @@ def test_vgb_task_can_slice_explicit_record_indices():
     assert [sample.metadata["record_index"] for sample in inspect_task.dataset] == [0, 1, 2]
 
 
+def test_vgb_task_accepts_keyword_task_name():
+    inspect_task = vgb_task(task_name="half_subdivision_test")
+
+    assert len(inspect_task.dataset) == 10
+    assert inspect_task.name == "vgb_half_subdivision_test"
+
+
 def test_delaunay_prompt_uses_exact_points():
     from visual_geometry_bench.datagen.delaunay_tasks import _to_points, generate_dataset_record
 

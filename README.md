@@ -27,7 +27,7 @@ The server comes up on `http://0.0.0.0:8000/v1`. Point the eval harness at it:
 ```bash
 export OPENAI_API_KEY=dummy
 export OPENAI_BASE_URL=http://127.0.0.1:8000/v1
-uv run inspect eval evals/vgb.py@vgb_task --model openai/Qwen/Qwen3-8B -T name=delaunay --limit 5
+uv run inspect eval evals/vgb.py@vgb_task --model openai/Qwen/Qwen3-8B -T task_name=delaunay --limit 5
 ```
 
 This mirrors Prime's documented self-hosted pattern: run a local vLLM
@@ -66,10 +66,10 @@ half_subdivision_test
 ## Run
 
 ```bash
-uv run --with openai inspect eval evals/vgb.py@vgb_task --model openai/gpt-5.4-2026-03-05 -T name=delaunay
-uv run --extra rlm --with openai inspect eval evals/vgb.py@vgb_task --model openai/gpt-5.4-2026-03-05 -T name=delaunay --solver vgb_rlm_repl
-uv run --extra rlm --with openai inspect eval evals/vgb.py@vgb_task --model openai/gpt-5.4-2026-03-05 -T name=delaunay --solver vgb_rlm_full
-uv run --with openai inspect eval evals/vgb.py@vgb_task --model openai/gpt-5.4-2026-03-05 -T name=topology_enumeration
+uv run --with openai inspect eval evals/vgb.py@vgb_task --model openai/gpt-5.4-2026-03-05 -T task_name=delaunay
+uv run --extra rlm --with openai inspect eval evals/vgb.py@vgb_task --model openai/gpt-5.4-2026-03-05 -T task_name=delaunay --solver vgb_rlm_repl
+uv run --extra rlm --with openai inspect eval evals/vgb.py@vgb_task --model openai/gpt-5.4-2026-03-05 -T task_name=delaunay --solver vgb_rlm_full
+uv run --with openai inspect eval evals/vgb.py@vgb_task --model openai/gpt-5.4-2026-03-05 -T task_name=topology_enumeration
 uv run inspect view
 ```
 
