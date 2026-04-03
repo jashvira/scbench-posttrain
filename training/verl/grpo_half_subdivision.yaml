@@ -1,11 +1,11 @@
 data:
-  train_files: /Users/jashvira/code/scbench-posttrain/training/verl/data/train.parquet
-  val_files: /Users/jashvira/code/scbench-posttrain/training/verl/data/val.parquet
+  train_files: ${oc.env:REPO_ROOT}/training/verl/data/train.parquet
+  val_files: ${oc.env:REPO_ROOT}/training/verl/data/val.parquet
   prompt_key: prompt
   train_batch_size: 64
   val_batch_size: 128
-  max_prompt_length: 4096
-  max_response_length: 512
+  max_prompt_length: 8192
+  max_response_length: 1024
   truncation: error
   filter_overlong_prompts: true
 
@@ -16,7 +16,7 @@ algorithm:
 
 actor_rollout_ref:
   model:
-    path: /path/to/Qwen/Qwen3-8B
+    path: ${oc.env:MODEL_PATH}
     enable_gradient_checkpointing: true
     use_remove_padding: true
   actor:
@@ -55,7 +55,7 @@ actor_rollout_ref:
       top_k: -1
 
 custom_reward_function:
-  path: /Users/jashvira/code/scbench-posttrain/training/verl/half_subdivision_reward.py
+  path: ${oc.env:REPO_ROOT}/training/verl/half_subdivision_reward.py
   name: compute_score
 
 trainer:
@@ -68,6 +68,6 @@ trainer:
   val_freq: 10
   save_freq: 10
   test_freq: 10
-  default_local_dir: /Users/jashvira/code/scbench-posttrain/training/verl/runs/qwen3_8b_half_subdivision
+  default_local_dir: ${oc.env:RUN_DIR}
   n_gpus_per_node: 1
   nnodes: 1
