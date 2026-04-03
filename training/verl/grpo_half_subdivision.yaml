@@ -1,3 +1,7 @@
+defaults:
+  - ppo_trainer
+  - _self_
+
 data:
   train_files: ${oc.env:REPO_ROOT}/training/verl/data/train.parquet
   val_files: ${oc.env:REPO_ROOT}/training/verl/data/val.parquet
