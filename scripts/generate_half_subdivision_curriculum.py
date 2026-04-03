@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import json
-import random
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -154,166 +153,11 @@ def _label_sort_key(label: str) -> tuple[int, str]:
     return (len(raw), raw)
 
 
-def _format_leaf_block(labels: list[str], *, row_width: int = 12) -> str:
-    rows = [
-        ", ".join(json.dumps(label) for label in labels[index : index + row_width])
-        for index in range(0, len(labels), row_width)
-    ]
-    return "[\n  " + ",\n  ".join(rows) + "\n]"
-
-
-def _prepare_compact_case(datagen_args: dict) -> tuple[list[Any], Any, list[Any], dict[str, Any]]:
-    from treelib import Tree
-    from visual_geometry_bench.datagen.half_subdivision_neighbours import (
-        Dimension,
-        _are_adjacent,
-        _build_subdivision,
-        _normalise_label,
-        _resolve_axis_cycle,
-    )
-
-    if not isinstance(datagen_args, dict):
-        raise TypeError("datagen_args must be a dictionary")
-
-    max_depth = int(datagen_args["max_depth"])
-    min_depth = int(datagen_args.get("min_depth", 0))
-    split_prob = float(datagen_args["split_prob"])
-    seed = int(datagen_args["seed"])
-    dim_name = str(datagen_args.get("dimension", "2D")).upper()
-    if dim_name == "2D":
-        dim = Dimension.D2
-    elif dim_name == "3D":
-        dim = Dimension.D3
-    else:
-        raise ValueError(f"Invalid dimension {dim_name!r}")
-    axis_cycle = _resolve_axis_cycle(
-        dim,
-        axis_cycle=datagen_args.get("axis_cycle"),
-        start_axis=datagen_args.get("start_axis"),
-    )
-    target_label = _normalise_label(datagen_args.get("target_label"))
-
-    rng = random.Random(seed)
-    tree = Tree()
-    bounds = {"x0": 0.0, "y0": 0.0, "x1": 1.0, "y1": 1.0}
-    if dim == Dimension.D3:
-        bounds.update({"z0": 0.0, "z1": 1.0})
-
-    leaves = _build_subdivision(
-        tree=tree,
-        parent_id=None,
-        label="",
-        depth=0,
-        max_depth=max_depth,
-        min_depth=min_depth,
-        split_prob=split_prob,
-        axis_cycle=axis_cycle,
-        dim=dim,
-        rng=rng,
-        **bounds,
-    )
-    leaves_by_label = {leaf.label: leaf for leaf in leaves}
-    target = rng.choice(leaves) if target_label is None else leaves_by_label[target_label]
-    neighbours = sorted(
-        (leaf for leaf in leaves if leaf is not target and _are_adjacent(leaf, target, dim)),
-        key=lambda leaf: leaf.label,
-    )
-    runtime_info = {
-        "max_depth": max_depth,
-        "min_depth": min_depth,
-        "split_prob": split_prob,
-        "seed": seed,
-        "start_axis": axis_cycle[0],
-        "axis_cycle": list(axis_cycle),
-        "dimension": dim_name,
-        "target_label": target.display_label(),
-        "leaf_count": len(leaves),
-    }
-    return leaves, target, neighbours, runtime_info
-
-
-def _format_compact_prompt(leaves: list[Any], target: Any, runtime_info: dict[str, Any]) -> str:
-    dim_name = runtime_info["dimension"]
-    shape = "unit cube" if dim_name == "3D" else "unit square"
-    contact = "shares a face with the target voxel" if dim_name == "3D" else (
-        "shares a boundary segment with the target"
-    )
-    axis_cycle_text = " -> ".join(runtime_info["axis_cycle"])
-    leaf_labels = sorted((leaf.display_label() for leaf in leaves), key=_label_sort_key)
-    leaf_block = _format_leaf_block(leaf_labels)
-    intro = (
-        "You are given the terminal leaves of a binary-tree description of an axis-aligned "
-        f"half subdivision of the {shape}."
-    )
-    return (
-        f"{intro}\n\n"
-        "Each node splits its parent cell into two children by bisecting along axes in the "
-        f"repeating cycle {axis_cycle_text} (repeating).\n\n"
-        "Instead of the full tree, you are given the terminal leaves only. Each label is the "
-        "root-to-leaf bitstring for a terminal cell: at each depth, bit 0 selects the lower "
-        "half and bit 1 selects the upper half along that split axis.\n\n"
-        f"Here are the terminal leaves of the subdivision:\n\n{leaf_block}\n\n"
-        f"Target leaf: {target.display_label()}\n\n"
-        "Before presenting the final list, begin your response with <thinking>...</thinking> "
-        "containing your full chain of thought or reasoning for your answer.\n"
-        f"List every terminal leaf that {contact}. Return the labels as a comma-separated "
-        "list of strings (quotes optional)."
-    )
-
-
-def _build_compact_record(
-    datagen_args: dict,
-    *,
-    tags: list[str] | None = None,
-    difficulty: str | None = None,
-) -> dict[str, Any]:
-    from visual_geometry_bench.datagen.utils import compute_content_hash
-
-    leaves, target, neighbours, runtime_info = _prepare_compact_case(datagen_args)
-    axis_cycle = tuple(runtime_info["axis_cycle"])
-    prompt = _format_compact_prompt(leaves, target, runtime_info)
-    ground_truth = sorted((leaf.display_label() for leaf in neighbours), key=_label_sort_key)
-
-    stored_datagen_args = {**datagen_args, "axis_cycle": list(axis_cycle)}
-    metadata = {"problem_type": "half_subdivision_neighbours"}
-    if tags:
-        metadata["tags"] = list(tags)
-    if difficulty:
-        metadata["difficulty"] = difficulty
-
-    content_id = compute_content_hash(
-        problem_type="half_subdivision_neighbours",
-        datagen_args=stored_datagen_args,
-        prompt=prompt,
-        ground_truth=ground_truth,
-    )
-    return {
-        "id": content_id,
-        "prompt": prompt,
-        "ground_truth": ground_truth,
-        "metadata": metadata,
-        "datagen_args": stored_datagen_args,
-        "runtime": {
-            "target_label": target.display_label(),
-            "neighbour_count": len(ground_truth),
-            **runtime_info,
-        },
-    }
-
-
 def _load_base_records() -> list[dict[str, Any]]:
     from visual_geometry_bench.dataset import build_records_from_config, load_config
 
     config = load_config(BASE_CONFIG_PATH)
-    source_records = build_records_from_config(config)
-    records = [
-        _build_compact_record(
-            record["datagen_args"],
-            tags=record.get("metadata", {}).get("tags"),
-            difficulty=record.get("metadata", {}).get("difficulty"),
-        )
-        for record in source_records
-    ]
+    records = build_records_from_config(config)
     for record in records:
         metadata = record.setdefault("metadata", {})
         metadata["curriculum_source"] = "base_curated"
@@ -323,6 +167,8 @@ def _load_base_records() -> list[dict[str, Any]]:
 
 
 def _build_profile_records(profile: Profile, profile_index: int) -> list[dict[str, Any]]:
+    from visual_geometry_bench.datagen.half_subdivision_neighbours import generate_dataset_record
+
     records: list[dict[str, Any]] = []
     seen_ids: set[str] = set()
     seen_prompts: set[str] = set()
@@ -337,7 +183,7 @@ def _build_profile_records(profile: Profile, profile_index: int) -> list[dict[st
         axis_cycle = list(profile.axis_cycles[attempt % len(profile.axis_cycles)])
         seed = (profile_index + 1) * 100_000 + attempt * 7_919 + len(records) * 131
 
-        record = _build_compact_record(
+        record = generate_dataset_record(
             {
                 "max_depth": max_depth,
                 "min_depth": min_depth,
