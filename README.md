@@ -50,6 +50,15 @@ Important caveat:
 - vLLM reports weight-only FP8 via Marlin
 - vLLM also warns that this may degrade performance
 
+Other stability notes that mattered in practice:
+
+- when starting vLLM over SSH, use a fully detached launch (`setsid`, redirected stdin, log file). A plain backgrounded SSH command let the parent exit and took the server down with it
+- for local vLLM evals, set `OPENAI_API_KEY=dummy` and `OPENAI_BASE_URL=http://127.0.0.1:8000/v1`
+- the Inspect task arg is `task_name`, not `name`
+- `record_indices` can arrive as a repeated list argument under Inspect; `--limit` is the safer quick path unless you need an exact fixed slice
+- the half-subdivision prompt/parser now expects a final line of the form `Final answer: ...`; this fixed valid long-form explanations being mis-scored by literal extraction
+- if you serve with a small `--max-model-len`, large half-subdivision prompts plus large `--max-tokens` will trip context errors. The current server uses `32768` to avoid that
+
 The server comes up on `http://0.0.0.0:8000/v1`. Point the eval harness at it:
 
 ```bash
