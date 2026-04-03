@@ -5,7 +5,7 @@
 ```bash
 cd /Users/jashvira/code/scbench-posttrain
 uv venv
-uv sync --group dev --extra inspect --extra rlm
+uv sync --group dev --extra inspect
 ```
 
 ## Prime GPU Container
@@ -21,6 +21,16 @@ prime login --plain
 export HF_TOKEN=...
 ./scripts/run_vllm_qwen3_8b.sh
 ```
+
+The Linux GPU bootstrap now uses pinned versions for the fragile serving stack:
+
+- `numpy==1.26.4`
+- `huggingface-hub==0.36.2`
+- `transformers==4.57.6`
+- `vllm==0.14.0`
+- `antlr4-python3-runtime==4.9.3`
+- `omegaconf==2.3.0`
+- `verl==0.7.1`
 
 The server comes up on `http://0.0.0.0:8000/v1`. Point the eval harness at it:
 
@@ -67,8 +77,6 @@ half_subdivision_test
 
 ```bash
 uv run --with openai inspect eval evals/vgb.py@vgb_task --model openai/gpt-5.4-2026-03-05 -T task_name=delaunay
-uv run --extra rlm --with openai inspect eval evals/vgb.py@vgb_task --model openai/gpt-5.4-2026-03-05 -T task_name=delaunay --solver vgb_rlm_repl
-uv run --extra rlm --with openai inspect eval evals/vgb.py@vgb_task --model openai/gpt-5.4-2026-03-05 -T task_name=delaunay --solver vgb_rlm_full
 uv run --with openai inspect eval evals/vgb.py@vgb_task --model openai/gpt-5.4-2026-03-05 -T task_name=topology_enumeration
 uv run inspect view
 ```

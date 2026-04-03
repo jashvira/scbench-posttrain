@@ -23,10 +23,7 @@ DEFAULT_GENERATE_CONFIG = GenerateConfig(
     max_retries=0,
     timeout=960,
     attempt_timeout=900,
-    reasoning_summary="concise",
-    reasoning_effort="xhigh",
-    max_tokens=32768,
-    verbosity="medium",
+    max_tokens=8192,
 )
 
 

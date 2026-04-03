@@ -2,6 +2,13 @@
 
 This is the minimal VeRL surface for GRPO on the half-subdivision task.
 
+Use the pinned training stack from the repo bootstrap on GPU boxes:
+
+```bash
+cd /Users/jashvira/code/scbench-posttrain
+./scripts/bootstrap_prime_vllm_container.sh
+```
+
 ## Prepare data
 
 ```bash

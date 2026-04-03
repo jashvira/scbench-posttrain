@@ -12,8 +12,7 @@ if ! command -v uv >/dev/null 2>&1; then
 fi
 
 uv venv --python 3.12
-uv sync --group dev --extra inspect --extra rlm
-uv pip install --python .venv/bin/python --torch-backend=auto "vllm>=0.8"
+uv sync --group dev --extra inspect --extra gpu --extra train
 
 if command -v prime >/dev/null 2>&1; then
   uv tool upgrade prime

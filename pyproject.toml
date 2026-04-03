@@ -12,7 +12,7 @@ dependencies = [
   "scad-format>=1.0.0",
   "filelock>=3.12",
   "matplotlib>=3.9",
-  "numpy>=2.1",
+  "numpy==1.26.4",
   "openai>=2.28.0",
   "pydantic>=2.8",
   "shapely>=2.1.2",
@@ -32,8 +32,15 @@ dev = [
 inspect = [
   "inspect-ai>=0.3",
 ]
-rlm = [
-  "rlms @ git+https://github.com/alexzhang13/rlm.git@2e5764b13963dfa4e2ff6ee88d9a302a392c9896",
+gpu = [
+  "huggingface-hub==0.36.2",
+  "transformers==4.57.6",
+  "vllm==0.14.0",
+]
+train = [
+  "antlr4-python3-runtime==4.9.3",
+  "omegaconf==2.3.0",
+  "verl==0.7.1",
 ]
 
 [tool.hatch.build.targets.wheel]
