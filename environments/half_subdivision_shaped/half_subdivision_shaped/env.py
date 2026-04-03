@@ -9,7 +9,6 @@ import verifiers as vf
 from datasets import Dataset
 
 from .geometry import (
-    EPS,
     GeometryCase,
     build_geometry_case,
     geometric_credit_sum,
@@ -18,8 +17,6 @@ from .geometry import (
 )
 from .parser import make_parser, parse_labels
 
-PARSE_BONUS = 0.05
-VALID_BONUS = 0.05
 NEAR_CONTACT_CREDIT = 0.25
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -33,8 +30,6 @@ def load_environment(
     task_name: str = "half_subdivision",
     *,
     system_prompt: str | None = None,
-    parse_bonus: float = PARSE_BONUS,
-    valid_bonus: float = VALID_BONUS,
     near_contact_credit: float = NEAR_CONTACT_CREDIT,
 ):
     """Build a shaped single-turn environment for half-subdivision tasks."""
@@ -47,8 +42,6 @@ def load_environment(
     rubric.add_reward_func(
         make_shaped_reward(
             cases,
-            parse_bonus=parse_bonus,
-            valid_bonus=valid_bonus,
             near_contact_credit=near_contact_credit,
         )
     )
@@ -109,8 +102,6 @@ def format_dataset(
 def make_shaped_reward(
     cases: dict[str, GeometryCase],
     *,
-    parse_bonus: float,
-    valid_bonus: float,
     near_contact_credit: float,
 ):
     """Create the main shaped reward function."""
@@ -125,16 +116,9 @@ def make_shaped_reward(
             return 0.0
 
         valid_labels = valid_predictions(labels, case)
-        valid_fraction = len(valid_labels) / len(labels) if labels else 1.0
         geometric_credit = geometric_credit_sum(valid_labels, case, near_contact_credit)
         denominator = max(len(case.truth_labels), len(valid_labels), 1)
-        geometric_score = min(geometric_credit / denominator, 1.0)
-        score = (
-            parse_bonus
-            + valid_bonus * valid_fraction
-            + (1.0 - parse_bonus - valid_bonus) * geometric_score
-        )
-        return 1.0 if score > 1.0 - EPS else min(score, 1.0)
+        return min(geometric_credit / denominator, 1.0)
 
     shaped_reward.__name__ = "shaped_reward"
     return shaped_reward
