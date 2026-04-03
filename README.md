@@ -32,6 +32,24 @@ The Linux GPU bootstrap now uses pinned versions for the fragile serving stack:
 - `omegaconf==2.3.0`
 - `verl==0.7.1`
 
+Known-good recovery note for the rented Prime box:
+
+- the remote env had drifted to `transformers==5.5.0.dev0`
+- restoring this pinned stack was enough to get vLLM booting again: `transformers==4.57.6`, `huggingface-hub==0.36.2`, `numpy==1.26.4`, `fsspec==2025.9.0`, `packaging==25.0`, `anthropic==0.71.0`
+
+Current known-good server setup on the 2x A100 box:
+
+- model: `Qwen/Qwen3-8B`
+- `tensor_parallel_size=2`
+- `quantization=fp8`
+- endpoint: `http://127.0.0.1:8000/v1/models`
+
+Important caveat:
+
+- these A100s do not have native FP8 support in this path
+- vLLM reports weight-only FP8 via Marlin
+- vLLM also warns that this may degrade performance
+
 The server comes up on `http://0.0.0.0:8000/v1`. Point the eval harness at it:
 
 ```bash
