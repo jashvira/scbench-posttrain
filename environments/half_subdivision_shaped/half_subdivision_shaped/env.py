@@ -46,7 +46,7 @@ def load_environment(
             near_contact_credit=near_contact_credit,
         )
     )
-    rubric.add_metric(make_parseable_metric())
+    rubric.add_metric(parseable)
     rubric.add_metric(make_valid_labels_metric(cases))
     rubric.add_metric(make_geometric_credit_metric(cases, near_contact_credit=near_contact_credit))
 
@@ -122,15 +122,11 @@ def make_shaped_reward(
     return shaped_reward
 
 
-def make_parseable_metric():
-    """Create a zero-weight parseability metric."""
+def parseable(parser, completion, *, info=None, **_kwargs) -> float:
+    """Zero-weight parseability metric."""
 
-    def parseable(parser, completion, *, info=None, **_kwargs) -> float:
-        _ = info
-        return 1.0 if parse_labels(parser.parse_answer(completion)) is not None else 0.0
-
-    parseable.__name__ = "parseable"
-    return parseable
+    _ = info
+    return 1.0 if parse_labels(parser.parse_answer(completion)) is not None else 0.0
 
 
 def make_valid_labels_metric(cases: dict[str, GeometryCase]):
