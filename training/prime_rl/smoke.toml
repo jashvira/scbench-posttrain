@@ -1,0 +1,58 @@
+max_steps = 40
+seq_len = 6144
+
+[deployment]
+num_train_gpus = 1
+num_infer_gpus = 1
+
+[model]
+name = "Qwen/Qwen3-8B"
+
+[wandb]
+project = "half-subdivision-prime-rl"
+name = "qwen3-8b-half-subdivision-smoke"
+
+[ckpt]
+
+[trainer.model]
+impl = "hf"
+
+[trainer.model.ac]
+freq = 1
+
+[trainer.model.lora]
+rank = 32
+alpha = 64
+
+[trainer.optim]
+lr = 1e-5
+
+[orchestrator]
+batch_size = 32
+rollouts_per_example = 4
+
+[orchestrator.sampling]
+max_tokens = 2048
+
+[[orchestrator.env]]
+id = "half-subdivision-shaped"
+name = "half-subdivision-train-smoke"
+args = { task_name = "half_subdivision", limit = 16 }
+
+[orchestrator.eval]
+interval = 10
+
+[orchestrator.eval.sampling]
+max_tokens = 2048
+
+[[orchestrator.eval.env]]
+id = "half-subdivision-shaped"
+name = "half-subdivision-test-smoke"
+args = { task_name = "half_subdivision_test", limit = 4 }
+num_examples = 4
+rollouts_per_example = 1
+
+[trainer]
+
+[inference.model]
+max_model_len = 6144

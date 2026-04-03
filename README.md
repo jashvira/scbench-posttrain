@@ -123,6 +123,24 @@ from half_subdivision_shaped import load_environment
 env = load_environment(task_name="half_subdivision_test")
 ```
 
+## PRIME-RL
+
+The repo now has a native PRIME-RL path for half-subdivision:
+
+- bootstrap PRIME-RL workspace:
+  [bootstrap_prime_rl_workspace.sh](/Users/jashvira/code/scbench-posttrain/scripts/bootstrap_prime_rl_workspace.sh)
+- full run:
+  [run_prime_rl_half_subdivision.sh](/Users/jashvira/code/scbench-posttrain/scripts/run_prime_rl_half_subdivision.sh)
+- fail-fast smoke run:
+  [run_prime_rl_half_subdivision_smoke.sh](/Users/jashvira/code/scbench-posttrain/scripts/run_prime_rl_half_subdivision_smoke.sh)
+- configs/docs:
+  [training/prime_rl](/Users/jashvira/code/scbench-posttrain/training/prime_rl)
+
+The PRIME-RL setup uses the local
+[half_subdivision_shaped](/Users/jashvira/code/scbench-posttrain/environments/half_subdivision_shaped)
+environment, defaults to LoRA on `Qwen/Qwen3-8B`, and keeps a smoke config for
+fast bring-up on `2x A100 80GB`.
+
 ## Check
 
 ```bash
