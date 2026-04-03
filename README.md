@@ -60,6 +60,7 @@ delaunay
 two_segments
 shikaku
 half_subdivision
+half_subdivision_test
 ```
 
 ## Run

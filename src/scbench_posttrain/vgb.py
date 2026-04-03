@@ -28,6 +28,7 @@ VGB_TASKS: dict[str, tuple[str, str]] = {
     "two_segments": ("two_segments_curated.toml", "Two Segments"),
     "shikaku": ("shikaku_curated.toml", "Shikaku Rectangles"),
     "half_subdivision": ("data/half_subdivision_curriculum.jsonl", "Half Subdivision Neighbours"),
+    "half_subdivision_test": ("data/half_subdivision_test.jsonl", "Half Subdivision Test Slice"),
 }
 
 

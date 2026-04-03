@@ -11,8 +11,20 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 VGB_ROOT = ROOT / "external" / "VisGeomBench"
 OUTPUT_PATH = ROOT / "data" / "half_subdivision_curriculum.jsonl"
+TEST_OUTPUT_PATH = ROOT / "data" / "half_subdivision_test.jsonl"
 BASE_CONFIG_PATH = VGB_ROOT / "configs" / "half_subdivision.toml"
 TOTAL_RECORDS = 300
+
+TEST_STAGE_QUOTAS: tuple[tuple[str, int], ...] = (
+    ("stage_01_2d_intro", 1),
+    ("stage_02_2d_easy", 1),
+    ("stage_03_2d_medium", 1),
+    ("stage_04_2d_hard", 2),
+    ("stage_00_curated", 1),
+    ("stage_05_3d_intro", 1),
+    ("stage_06_3d_medium", 1),
+    ("stage_07_3d_hard", 2),
+)
 
 sys.path.insert(0, str(VGB_ROOT))
 
@@ -209,6 +221,44 @@ def _build_profile_records(profile: Profile, profile_index: int) -> list[dict[st
     return records
 
 
+def _build_test_slice(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    test_records: list[dict[str, Any]] = []
+    source_index_by_id = {record["id"]: index for index, record in enumerate(records)}
+    bucket = 0
+
+    for stage_name, quota in TEST_STAGE_QUOTAS:
+        stage_records = [
+            record
+            for record in records
+            if record["metadata"].get("curriculum_stage") == stage_name
+        ]
+        if len(stage_records) < quota:
+            raise SystemExit(f"Stage {stage_name} has {len(stage_records)} records, need {quota}")
+
+        for rank in range(quota):
+            index = ((2 * rank + 1) * len(stage_records)) // (2 * quota)
+            index = min(index, len(stage_records) - 1)
+            record = json.loads(json.dumps(stage_records[index]))
+            metadata = record.setdefault("metadata", {})
+            metadata["slice"] = "test"
+            metadata["slice_bucket"] = bucket
+            metadata["slice_source_index"] = source_index_by_id[record["id"]]
+            test_records.append(record)
+            bucket += 1
+
+    test_records.sort(key=lambda record: int(record["metadata"]["curriculum_score"]))
+    for rank, record in enumerate(test_records):
+        record["metadata"]["slice_rank"] = rank
+    return test_records
+
+
+def _write_jsonl(path: Path, records: list[dict[str, Any]]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8") as handle:
+        for record in records:
+            handle.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+
 def main() -> None:
     records = _load_base_records()
     seen_ids = {record["id"] for record in records}
@@ -253,12 +303,12 @@ def main() -> None:
     for index, record in enumerate(records):
         record["metadata"]["curriculum_index"] = index
 
-    OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
-    with OUTPUT_PATH.open("w", encoding="utf-8") as handle:
-        for record in records:
-            handle.write(json.dumps(record, ensure_ascii=False) + "\n")
+    test_records = _build_test_slice(records)
+    _write_jsonl(OUTPUT_PATH, records)
+    _write_jsonl(TEST_OUTPUT_PATH, test_records)
 
     print(f"Wrote {len(records)} records to {OUTPUT_PATH}")
+    print(f"Wrote {len(test_records)} records to {TEST_OUTPUT_PATH}")
 
 
 if __name__ == "__main__":
