@@ -14,9 +14,7 @@ if str(ENV_ROOT) not in sys.path:
 
 from half_subdivision_shaped.geometry import (  # noqa: E402
     build_geometry_case,
-    geometric_credit_sum,
     shaped_score,
-    valid_predictions,
 )
 from half_subdivision_shaped.parser import make_parser, parse_labels  # noqa: E402
 
@@ -36,7 +34,7 @@ def compute_score(
 
     labels = parse_labels(PARSER.parse_answer(solution_str))
     if labels is None:
-        return {"score": 0.0, "parseable": 0.0, "valid_labels": 0.0, "geometric_credit": 0.0}
+        return {"score": 0.0}
 
     case = build_geometry_case(
         {
@@ -45,14 +43,4 @@ def compute_score(
             "runtime": extra_info["runtime"],
         }
     )
-    valid_labels = valid_predictions(labels, case)
-    total_credit = geometric_credit_sum(valid_labels, case, near_contact_credit=0.25)
-
-    geometric_credit = min(total_credit / len(valid_labels), 1.0) if valid_labels else 0.0
-    valid_fraction = len(valid_labels) / len(labels) if labels else 1.0
-    return {
-        "score": shaped_score(labels, case, near_contact_credit=0.25),
-        "parseable": 1.0,
-        "valid_labels": valid_fraction,
-        "geometric_credit": geometric_credit,
-    }
+    return {"score": shaped_score(labels, case, near_contact_credit=0.25)}
