@@ -235,19 +235,29 @@ def _prepare_compact_case(datagen_args: dict) -> tuple[list[Any], Any, list[Any]
 def _format_compact_prompt(leaves: list[Any], target: Any, runtime_info: dict[str, Any]) -> str:
     dim_name = runtime_info["dimension"]
     shape = "unit cube" if dim_name == "3D" else "unit square"
-    contact = "shares a face" if dim_name == "3D" else "shares a boundary segment"
+    contact = "shares a face with the target voxel" if dim_name == "3D" else (
+        "shares a boundary segment with the target"
+    )
     axis_cycle_text = " -> ".join(runtime_info["axis_cycle"])
     leaf_labels = sorted((leaf.display_label() for leaf in leaves), key=_label_sort_key)
     leaf_block = _format_leaf_block(leaf_labels)
+    intro = (
+        "You are given the terminal leaves of a binary-tree description of an axis-aligned "
+        f"half subdivision of the {shape}."
+    )
     return (
-        f"You are given the terminal leaves of an axis-aligned half subdivision of the {shape}.\n\n"
-        "Each label is a root-to-leaf bitstring. At depth d, the split axis follows the "
-        f"repeating cycle {axis_cycle_text} (repeating). Bit 0 means the lower half on that "
-        "axis; bit 1 means the upper half. Any listed label is terminal.\n\n"
-        f"Terminal leaves:\n{leaf_block}\n\n"
+        f"{intro}\n\n"
+        "Each node splits its parent cell into two children by bisecting along axes in the "
+        f"repeating cycle {axis_cycle_text} (repeating).\n\n"
+        "Instead of the full tree, you are given the terminal leaves only. Each label is the "
+        "root-to-leaf bitstring for a terminal cell: at each depth, bit 0 selects the lower "
+        "half and bit 1 selects the upper half along that split axis.\n\n"
+        f"Here are the terminal leaves of the subdivision:\n\n{leaf_block}\n\n"
         f"Target leaf: {target.display_label()}\n\n"
-        f"List every terminal leaf that {contact} with the target. Return only a "
-        "comma-separated list of labels (quotes optional)."
+        "Before presenting the final list, begin your response with <thinking>...</thinking> "
+        "containing your full chain of thought or reasoning for your answer.\n"
+        f"List every terminal leaf that {contact}. Return the labels as a comma-separated "
+        "list of strings (quotes optional)."
     )
 
 
