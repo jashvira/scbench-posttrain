@@ -7,7 +7,6 @@ import json
 import os
 import sys
 from contextlib import contextmanager
-from copy import deepcopy
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
@@ -33,8 +32,6 @@ VGB_TASKS: dict[str, tuple[str, str]] = {
 
 @dataclass(frozen=True)
 class VGBTask:
-    """Loaded VGB task data needed by the local Inspect runtime."""
-
     name: str
     title: str
     dataset: MemoryDataset
@@ -43,8 +40,6 @@ class VGBTask:
 
 @contextmanager
 def vgb_runtime():
-    """Run upstream VGB code from its repository root so relative assets resolve."""
-
     if not VGB_ROOT.exists():
         raise RuntimeError(
             f"Missing VisGeomBench submodule at {VGB_ROOT}. Initialize it before running VGB evals."
@@ -61,15 +56,7 @@ def vgb_runtime():
             os.chdir(previous_cwd)
 
 
-def available_vgb_tasks() -> list[str]:
-    """Return the supported public VGB task names."""
-
-    return sorted(VGB_TASKS)
-
-
 def _build_dataset(name: str, title: str, records: list[dict[str, Any]]) -> MemoryDataset:
-    """Expose config-generated VGB records as a plain Inspect dataset."""
-
     samples = [
         Sample(
             input=record["prompt"],
@@ -88,8 +75,6 @@ def _build_dataset(name: str, title: str, records: list[dict[str, Any]]) -> Memo
 
 
 def _load_records(config_name: str) -> list[dict[str, Any]]:
-    """Load one VGB config into concrete in-memory records."""
-
     with vgb_runtime():
         from visual_geometry_bench.dataset import build_records_from_config, load_config
 
@@ -99,13 +84,11 @@ def _load_records(config_name: str) -> list[dict[str, Any]]:
 
 @lru_cache(maxsize=None)
 def _load_vgb_task_cached(name: str) -> VGBTask:
-    """Load and cache one VGB task bundle."""
-
     try:
         config_name, title = VGB_TASKS[name]
     except KeyError as exc:
         raise ValueError(
-            f"Unknown VGB task {name!r}. Available tasks: {', '.join(available_vgb_tasks())}"
+            f"Unknown VGB task {name!r}. Available tasks: {', '.join(sorted(VGB_TASKS))}"
         ) from exc
 
     records = _load_records(config_name)
@@ -118,23 +101,13 @@ def _load_vgb_task_cached(name: str) -> VGBTask:
 
 
 def load_vgb_task(name: str) -> VGBTask:
-    """Load one VGB task for Inspect evaluation."""
-
-    cached = _load_vgb_task_cached(name)
-    return VGBTask(
-        name=cached.name,
-        title=cached.title,
-        dataset=deepcopy(cached.dataset),
-        records=deepcopy(cached.records),
-    )
+    return _load_vgb_task_cached(name)
 
 
 load_vgb_task.cache_clear = _load_vgb_task_cached.cache_clear
 
 
 def extract_vgb_answer(completion: str) -> str | None:
-    """Extract the final literal answer from a model completion."""
-
     with vgb_runtime():
         from visual_geometry_bench.evaluation.answer_parser import PythonLiteralParser
 
@@ -142,8 +115,6 @@ def extract_vgb_answer(completion: str) -> str | None:
 
 
 def parse_vgb_answer(literal: str | None) -> Any | None:
-    """Parse a literal answer into a Python value for visualisation."""
-
     if literal is None:
         return None
     try:
@@ -156,8 +127,6 @@ def parse_vgb_answer(literal: str | None) -> Any | None:
 
 
 def grade_vgb_answer(record: dict[str, Any], completion: str) -> tuple[float, dict[str, Any], Any | None]:
-    """Verify one completion against the record's VGB verifier."""
-
     extracted = extract_vgb_answer(completion)
     parsed_answer = parse_vgb_answer(extracted)
 
@@ -187,8 +156,6 @@ def grade_vgb_answer(record: dict[str, Any], completion: str) -> tuple[float, di
 
 
 def log_prompt_artifacts(record: dict[str, Any]) -> None:
-    """Log the task visual into the transcript when a renderer exists."""
-
     markdown = _render_record_markdown(
         record,
         answer=None,
@@ -201,8 +168,6 @@ def log_prompt_artifacts(record: dict[str, Any]) -> None:
 
 
 def log_score_artifacts(record: dict[str, Any], answer: Any | None) -> None:
-    """Log the comparison visual into the transcript when a renderer exists."""
-
     markdown = _render_record_markdown(
         record,
         answer=answer,
@@ -224,8 +189,6 @@ def _render_record_markdown(
     alt_text: str,
     answer_label: str | None = None,
 ) -> str | None:
-    """Render one record into markdown images, skipping tasks without a renderer."""
-
     with vgb_runtime():
         from visualisations import visualise_record
         import matplotlib.pyplot as plt
@@ -260,8 +223,6 @@ def _render_record_markdown(
 
 
 def _figure_to_data_url(figure: Any) -> str:
-    """Serialize a matplotlib figure into a PNG data URL."""
-
     buffer = io.BytesIO()
     figure.savefig(buffer, format="png", dpi=150, bbox_inches="tight")
     encoded = base64.b64encode(buffer.getvalue()).decode("ascii")
@@ -269,8 +230,6 @@ def _figure_to_data_url(figure: Any) -> str:
 
 
 def _format_grading_text(diagnostics: dict[str, Any]) -> str:
-    """Summarize verifier diagnostics without inflating score metadata."""
-
     if diagnostics.get("passed"):
         return "verified"
 

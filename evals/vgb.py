@@ -30,8 +30,6 @@ DEFAULT_GENERATE_CONFIG = GenerateConfig(
 
 
 class VGBRunStore(StoreModel):
-    """Per-sample runtime data for the generic VGB solver arms."""
-
     name: str | None = None
     arm: str = "direct"
     rlm_execution_time_seconds: float | None = None
@@ -44,14 +42,10 @@ class VGBRunStore(StoreModel):
 
 
 def _json_safe(value: Any) -> Any:
-    """Convert nested values into a JSON-serializable shape with minimal coercion."""
-
     return json.loads(json.dumps(value, default=str))
 
 
 def _merge_usage_summaries(usages: list[dict[str, Any]]) -> dict[str, Any]:
-    """Merge multiple RLM usage summaries into one aggregate payload."""
-
     merged: dict[str, dict[str, float | int]] = {}
     total_cost = 0.0
     has_cost = False
@@ -85,8 +79,6 @@ def _merge_usage_summaries(usages: list[dict[str, Any]]) -> dict[str, Any]:
 
 
 def _resolve_rlm_model_name(state: TaskState, override: str | None) -> str:
-    """Resolve the model name to pass through to RLM."""
-
     if override:
         return override
 
@@ -104,8 +96,6 @@ def _resolve_rlm_model_name(state: TaskState, override: str | None) -> str:
 
 
 def _rlm_root_prompt(arm: str) -> str:
-    """Return the generic control prompt for a VGB RLM solver arm."""
-
     guidance = (
         "Use the local Python REPL and built-in query helpers if useful. "
         "Recursive child RLM calls are not enabled in this arm."
@@ -130,8 +120,6 @@ def _rlm_root_prompt(arm: str) -> str:
 
 
 def _needs_repair(completion: str) -> bool:
-    """Detect malformed meta-finalizations that should get one more RLM pass."""
-
     if extract_vgb_answer(completion) is None:
         return True
 
@@ -158,8 +146,6 @@ async def _run_rlm_arm(
     max_iterations: int,
     max_depth: int,
 ) -> TaskState:
-    """Run one generic RLM-backed solver arm and write its completion into Inspect state."""
-
     try:
         from rlm import RLM
         from rlm.logger import RLMLogger
@@ -258,13 +244,9 @@ async def _run_rlm_arm(
 
 @solver
 def vgb_direct():
-    """Run the default Inspect generation path for VGB."""
-
     direct_generate = generate()
 
     async def solve(state: TaskState, generate: Generate) -> TaskState:
-        """Tag the run as direct generation before delegating to Inspect."""
-
         loaded_task = load_vgb_task(str(state.metadata["name"]))
         record = loaded_task.records[int(state.metadata["record_index"])]
         store = state.store_as(VGBRunStore)
@@ -281,11 +263,7 @@ def vgb_rlm_repl(
     max_iterations: int = 12,
     rlm_model_name: str | None = None,
 ):
-    """Run one VGB sample through native shallow RLM with a local REPL."""
-
     async def solve(state: TaskState, generate: Generate) -> TaskState:
-        """Execute the shallow RLM arm for one sample."""
-
         del generate
         return await _run_rlm_arm(
             state,
@@ -304,11 +282,7 @@ def vgb_rlm_full(
     max_depth: int = 2,
     rlm_model_name: str | None = None,
 ):
-    """Run one VGB sample through native recursive RLM."""
-
     async def solve(state: TaskState, generate: Generate) -> TaskState:
-        """Execute the full RLM arm for one sample."""
-
         del generate
         return await _run_rlm_arm(
             state,
@@ -323,11 +297,7 @@ def vgb_rlm_full(
 
 @scorer(metrics=[mean()])
 def vgb_score(vgb_task: VGBTask):
-    """Score one completion with the VGB verifier for that record."""
-
     async def score(state: TaskState, target: Any) -> Score:
-        """Run the VGB verifier on the current model output."""
-
         del target
         completion = state.output.completion if state.output is not None else ""
         record = vgb_task.records[int(state.metadata["record_index"])]
@@ -363,8 +333,6 @@ def vgb_task(
     name: str,
     solver: Solver | None = None,
 ) -> Task:
-    """Build an Inspect task from one VGB config bundle."""
-
     loaded_task = load_vgb_task(name)
     task_name = f"vgb_{loaded_task.name}"
     return Task(

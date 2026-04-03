@@ -12,8 +12,6 @@ from scbench_posttrain.vgb import load_vgb_task
 
 
 def _make_state(*, sample, completion: str) -> TaskState:
-    """Build a minimal Inspect task state for VGB RLM tests."""
-
     return TaskState(
         model="openai/test-model",
         sample_id=sample.id,
@@ -28,15 +26,11 @@ def _make_state(*, sample, completion: str) -> TaskState:
 
 
 async def _unexpected_generate(*args, **kwargs):
-    """Fail if a custom solver unexpectedly calls Inspect generation."""
-
     del args, kwargs
     raise AssertionError("custom RLM solver should not call Inspect generate()")
 
 
 def _install_fake_rlm(monkeypatch):
-    """Install a fake `rlm` module so solver tests stay fully local."""
-
     fake_rlm_module = types.ModuleType("rlm")
     fake_logger_module = types.ModuleType("rlm.logger")
 
@@ -97,8 +91,6 @@ def _install_fake_rlm(monkeypatch):
 
 
 def test_vgb_rlm_repl_solver_uses_native_shallow_settings(monkeypatch):
-    """The shallow RLM arm should use native non-recursive settings."""
-
     fake_rlm = _install_fake_rlm(monkeypatch)
     task = load_vgb_task("topology_enumeration")
     state = _make_state(sample=task.dataset[0], completion="")
@@ -130,8 +122,6 @@ def test_vgb_rlm_repl_solver_uses_native_shallow_settings(monkeypatch):
 
 
 def test_vgb_rlm_retries_malformed_meta_final(monkeypatch):
-    """Malformed meta-final output should trigger bounded repair completions."""
-
     fake_rlm = _install_fake_rlm(monkeypatch)
     fake_rlm.responses = [
         '"Please run the REPL inspection first; I have requested printing `context` to read the task before solving it."',

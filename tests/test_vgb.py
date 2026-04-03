@@ -25,8 +25,6 @@ class FakeTranscript:
 
 
 def _make_state(*, sample, completion: str) -> TaskState:
-    """Build a minimal Inspect task state for VGB tests."""
-
     return TaskState(
         model="openai/test-model",
         sample_id=sample.id,
@@ -41,8 +39,6 @@ def _make_state(*, sample, completion: str) -> TaskState:
 
 
 def test_vgb_task_builds_memory_dataset():
-    """The Inspect task factory should expose VGB records directly."""
-
     inspect_task = vgb_task("topology_enumeration")
 
     assert len(inspect_task.dataset) == 10
@@ -58,26 +54,13 @@ def test_vgb_task_builds_memory_dataset():
 
 
 def test_delaunay_prompt_uses_exact_points():
-    """The Delaunay prompt should show the exact point set used for verification."""
-
     from visual_geometry_bench.datagen.delaunay_tasks import _to_points, generate_dataset_record
 
     record = generate_dataset_record({"num_points": 58, "seed": 1063})
-    sample = Sample(
-        input=record["prompt"],
-        id=record["id"],
-        metadata={
-            "name": "delaunay",
-            "title": "Delaunay Triangulation",
-            "record_id": record["id"],
-            "record_index": 0,
-            "problem_type": "delaunay_triangulation",
-        },
-    )
     prompt_points = ast.literal_eval(
         re.search(
             r"\n(\[.*\])\n\nReturn the Delaunay triangulation",
-            sample.input,
+            record["prompt"],
             re.S,
         ).group(1)
     )
@@ -86,8 +69,6 @@ def test_delaunay_prompt_uses_exact_points():
 
 
 def test_delaunay_visuals_log_to_transcript(monkeypatch):
-    """Prompt and comparison visuals should flow through the generic VGB logging layer."""
-
     fake_transcript = FakeTranscript()
     monkeypatch.setattr("scbench_posttrain.vgb.transcript", lambda: fake_transcript)
     monkeypatch.setattr(
@@ -137,8 +118,6 @@ def test_delaunay_visuals_log_to_transcript(monkeypatch):
 
 
 def test_repo_no_longer_references_scbench_surface():
-    """The repo should no longer depend on SCBench runtime names or task-id entrypoints."""
-
     result = subprocess.run(
         [
             "rg",
