@@ -1,0 +1,17 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "half-subdivision-shaped"
+version = "0.1.0"
+description = "Shaped Verifiers environment for half-subdivision neighbours"
+requires-python = ">=3.11"
+dependencies = [
+  "datasets",
+  "treelib>=1.7",
+  "verifiers>=0.1.7.post0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["half_subdivision_shaped"]

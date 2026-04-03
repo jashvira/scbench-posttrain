@@ -75,12 +75,17 @@ uv run inspect view
 
 ## Half-Subdivision Shaped Env
 
-Keep benchmark eval binary and load the shaped training env separately:
+Keep benchmark eval binary and use the separate Verifiers env package for
+training:
+
+```bash
+prime env install environments/half_subdivision_shaped
+```
 
 ```python
-from scbench_posttrain.half_subdivision_env import load_half_subdivision_shaped_env
+from half_subdivision_shaped import load_environment
 
-env = load_half_subdivision_shaped_env(task_name="half_subdivision_test")
+env = load_environment(task_name="half_subdivision_test")
 ```
 
 ## Check
