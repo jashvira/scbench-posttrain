@@ -4,8 +4,9 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MODEL_PATH="${MODEL_PATH:?set MODEL_PATH to a local Hugging Face model path}"
 RUN_DIR="${RUN_DIR:-$REPO_ROOT/training/verl/runs/$(date +%Y%m%d-%H%M%S)-half-subdivision-grpo}"
+PYTHON_BIN="${PYTHON_BIN:-$REPO_ROOT/.venv/bin/python}"
 VERL_CONFIG_PATH="${VERL_CONFIG_PATH:-$(
-  uv run python - <<'PY'
+  "$PYTHON_BIN" - <<'PY'
 from pathlib import Path
 import verl
 
@@ -29,14 +30,14 @@ GPU_MEMORY_UTILIZATION="${GPU_MEMORY_UTILIZATION:-0.8}"
 
 cd "$REPO_ROOT"
 
-uv run python training/verl/prepare_half_subdivision_data.py
+"$PYTHON_BIN" training/verl/prepare_half_subdivision_data.py
 
 export HYDRA_FULL_ERROR=1
 export REPO_ROOT
 export MODEL_PATH
 export RUN_DIR
 
-uv run python -m verl.trainer.main_ppo \
+"$PYTHON_BIN" -m verl.trainer.main_ppo \
   --config-name=ppo_trainer \
   --config-path="$VERL_CONFIG_PATH" \
   algorithm.adv_estimator=grpo \
