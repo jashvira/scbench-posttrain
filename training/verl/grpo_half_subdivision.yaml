@@ -58,6 +58,45 @@ custom_reward_function:
   path: ${oc.env:REPO_ROOT}/training/verl/half_subdivision_reward.py
   name: compute_score
 
+reward_model:
+  num_workers: null
+  reward_manager: null
+  enable: null
+  enable_resource_pool: null
+  n_gpus_per_node: null
+  nnodes: null
+  reward_loop_source: null
+  reward_loop_module_path: null
+  reward_loop_class_name: null
+  model:
+    path: null
+  rollout: {}
+
+sandbox_fusion:
+  url: null
+  max_concurrent: null
+  memory_limit_mb: null
+
+reward:
+  num_workers: 8
+  custom_reward_function:
+    path: null
+    name: compute_score
+  reward_manager:
+    source: register
+    name: naive
+    module:
+      path: null
+      name: custom_reward_manager
+  reward_model:
+    enable: false
+    enable_resource_pool: false
+    n_gpus_per_node: 0
+    nnodes: 0
+    model_path: null
+    rollout:
+      name: vllm
+
 trainer:
   total_epochs: 1
   critic_warmup: 0
