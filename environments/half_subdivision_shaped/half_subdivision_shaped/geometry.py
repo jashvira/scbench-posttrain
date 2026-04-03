@@ -166,6 +166,15 @@ def geometric_credit_sum(
     )
 
 
+def shaped_score(labels: list[str], case: GeometryCase, near_contact_credit: float) -> float:
+    """Compute the normalized shaped score for one parsed prediction."""
+
+    valid_labels = valid_predictions(labels, case)
+    total_credit = geometric_credit_sum(valid_labels, case, near_contact_credit)
+    denominator = max(len(case.truth_labels), len(valid_labels), 1)
+    return min(total_credit / denominator, 1.0)
+
+
 def contact_credit(a: Cell, b: Cell, dimension_count: int, near_contact_credit: float) -> float:
     """Score one predicted cell against the target."""
 

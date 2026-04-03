@@ -13,6 +13,7 @@ from .geometry import (
     build_geometry_case,
     geometric_credit_sum,
     resolve_case,
+    shaped_score,
     valid_predictions,
 )
 from .parser import make_parser, parse_labels
@@ -115,10 +116,7 @@ def make_shaped_reward(
         if case is None:
             return 0.0
 
-        valid_labels = valid_predictions(labels, case)
-        geometric_credit = geometric_credit_sum(valid_labels, case, near_contact_credit)
-        denominator = max(len(case.truth_labels), len(valid_labels), 1)
-        return min(geometric_credit / denominator, 1.0)
+        return shaped_score(labels, case, near_contact_credit)
 
     shaped_reward.__name__ = "shaped_reward"
     return shaped_reward

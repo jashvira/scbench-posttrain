@@ -13,25 +13,14 @@ if str(ENV_ROOT) not in sys.path:
     sys.path.insert(0, str(ENV_ROOT))
 
 from half_subdivision_shaped.geometry import (  # noqa: E402
-    GeometryCase,
     build_geometry_case,
     geometric_credit_sum,
+    shaped_score,
     valid_predictions,
 )
 from half_subdivision_shaped.parser import make_parser, parse_labels  # noqa: E402
 
 PARSER = make_parser()
-
-
-def build_case(ground_truth: str, extra_info: dict[str, Any]) -> GeometryCase:
-    """Build one geometry case from VeRL batch fields."""
-
-    record = {
-        "ground_truth": json.loads(ground_truth),
-        "datagen_args": extra_info["datagen_args"],
-        "runtime": extra_info["runtime"],
-    }
-    return build_geometry_case(record)
 
 
 def compute_score(
@@ -49,16 +38,20 @@ def compute_score(
     if labels is None:
         return {"score": 0.0, "parseable": 0.0, "valid_labels": 0.0, "geometric_credit": 0.0}
 
-    case = build_case(ground_truth, extra_info)
+    case = build_geometry_case(
+        {
+            "ground_truth": json.loads(ground_truth),
+            "datagen_args": extra_info["datagen_args"],
+            "runtime": extra_info["runtime"],
+        }
+    )
     valid_labels = valid_predictions(labels, case)
     total_credit = geometric_credit_sum(valid_labels, case, near_contact_credit=0.25)
-    denominator = max(len(case.truth_labels), len(valid_labels), 1)
-    score = min(total_credit / denominator, 1.0)
 
     geometric_credit = min(total_credit / len(valid_labels), 1.0) if valid_labels else 0.0
     valid_fraction = len(valid_labels) / len(labels) if labels else 1.0
     return {
-        "score": score,
+        "score": shaped_score(labels, case, near_contact_credit=0.25),
         "parseable": 1.0,
         "valid_labels": valid_fraction,
         "geometric_credit": geometric_credit,
