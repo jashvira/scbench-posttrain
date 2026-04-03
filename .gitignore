@@ -13,6 +13,3 @@ checkpoints/
 output/
 outputs/
 results/
-training/verl/data/
-training/verl/data-smoke/
-training/verl/runs/

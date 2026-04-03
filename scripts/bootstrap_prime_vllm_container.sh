@@ -12,7 +12,7 @@ if ! command -v uv >/dev/null 2>&1; then
 fi
 
 uv venv --python 3.12
-uv sync --group dev --extra inspect --extra gpu --extra train
+uv sync --group dev --extra inspect --extra gpu
 
 if command -v prime >/dev/null 2>&1; then
   uv tool upgrade prime

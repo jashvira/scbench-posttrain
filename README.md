@@ -28,9 +28,6 @@ The Linux GPU bootstrap now uses pinned versions for the fragile serving stack:
 - `huggingface-hub==0.36.2`
 - `transformers==4.57.6`
 - `vllm==0.14.0`
-- `antlr4-python3-runtime==4.9.3`
-- `omegaconf==2.3.0`
-- `verl==0.7.1`
 
 Known-good recovery note for the rented Prime box:
 
@@ -140,6 +137,12 @@ The PRIME-RL setup uses the local
 [half_subdivision_shaped](/Users/jashvira/code/scbench-posttrain/environments/half_subdivision_shaped)
 environment, defaults to LoRA on `Qwen/Qwen3-8B`, and keeps a smoke config for
 fast bring-up on `2x A100 80GB`.
+
+The old VeRL training path is intentionally gone. This repo now keeps:
+
+- Inspect for eval
+- local Verifiers env packaging
+- PRIME-RL for RL training
 
 ## Check
 
