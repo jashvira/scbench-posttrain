@@ -30,12 +30,13 @@ TASK_SOURCES = {
 def load_environment(
     task_name: str = "half_subdivision",
     *,
+    limit: int | None = None,
     system_prompt: str | None = None,
     near_contact_credit: float = NEAR_CONTACT_CREDIT,
 ):
     """Build a shaped single-turn environment for half-subdivision tasks."""
 
-    records = load_records(task_name)
+    records = load_records(task_name, limit=limit)
     rows, cases = format_dataset(records)
     parser = make_parser()
 
@@ -58,7 +59,7 @@ def load_environment(
     )
 
 
-def load_records(task_name: str) -> list[dict]:
+def load_records(task_name: str, limit: int | None = None) -> list[dict]:
     """Load one of the local half-subdivision datasets."""
 
     try:
@@ -68,6 +69,9 @@ def load_records(task_name: str) -> list[dict]:
 
     with path.open(encoding="utf-8") as handle:
         records = [json.loads(line) for line in handle if line.strip()]
+
+    if limit is not None:
+        records = records[:limit]
 
     if any(
         record.get("metadata", {}).get("problem_type") != "half_subdivision_neighbours"
