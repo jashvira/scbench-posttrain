@@ -10,6 +10,7 @@ build/
 logs/
 wandb/
 checkpoints/
+output/
 results/
 training/verl/data/
 training/verl/runs/
