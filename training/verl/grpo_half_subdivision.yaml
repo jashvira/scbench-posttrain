@@ -110,9 +110,9 @@ trainer:
   project_name: half_subdivision_grpo
   experiment_name: qwen3_8b_half_subdivision
   val_before_train: true
-  val_freq: 10
+  val_freq: 50
   save_freq: 10
-  test_freq: 10
+  test_freq: 50
   default_local_dir: ${oc.env:RUN_DIR}
   n_gpus_per_node: 1
   nnodes: 1

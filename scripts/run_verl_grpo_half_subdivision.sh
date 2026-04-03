@@ -28,6 +28,7 @@ MAX_PROMPT_LENGTH="${MAX_PROMPT_LENGTH:-16384}"
 MAX_RESPONSE_LENGTH="${MAX_RESPONSE_LENGTH:-16384}"
 GPU_MEMORY_UTILIZATION="${GPU_MEMORY_UTILIZATION:-0.8}"
 TOTAL_TOKEN_BUDGET="${TOTAL_TOKEN_BUDGET:-$((MAX_PROMPT_LENGTH + MAX_RESPONSE_LENGTH))}"
+TEST_FREQ="${TEST_FREQ:-50}"
 XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$REPO_ROOT/.runtime-config}"
 XDG_CACHE_HOME="${XDG_CACHE_HOME:-$REPO_ROOT/.runtime-cache}"
 MPLCONFIGDIR="${MPLCONFIGDIR:-$XDG_CACHE_HOME/matplotlib}"
@@ -56,6 +57,8 @@ mkdir -p "$RUN_DIR" "$XDG_CONFIG_HOME" "$XDG_CACHE_HOME" "$MPLCONFIGDIR"
   algorithm.adv_estimator=grpo \
   trainer.project_name=half_subdivision_grpo \
   trainer.experiment_name=qwen3_8b_half_subdivision \
+  trainer.test_freq="$TEST_FREQ" \
+  trainer.val_before_train=true \
   data.train_files="$REPO_ROOT/training/verl/data/train.parquet" \
   data.val_files="$REPO_ROOT/training/verl/data/val.parquet" \
   data.prompt_key=prompt \

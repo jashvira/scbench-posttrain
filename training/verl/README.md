@@ -98,6 +98,7 @@ The launcher now:
 - starts with conservative defaults for first bring-up: `ROLLOUT_N=4`, `TRAIN_BATCH_SIZE=32`, `VAL_BATCH_SIZE=64`, `MAX_PROMPT_LENGTH=16384`, `MAX_RESPONSE_LENGTH=16384`
 - sets `TOTAL_TOKEN_BUDGET=MAX_PROMPT_LENGTH+MAX_RESPONSE_LENGTH` for actor PPO and rollout log-prob passes, which VeRL needs because those paths see full prompt-plus-response sequences
 - writes already-filtered parquet rows, instead of relying only on VeRL's prompt-only overlength filter
+- runs validation on the 10-example `half_subdivision_test` slice every `50` training steps by default
 - creates writable runtime dirs for `XDG_CONFIG_HOME`, `XDG_CACHE_HOME`, and `MPLCONFIGDIR` under the repo so vLLM and matplotlib do not crash on locked-down GPU boxes
 
 Override as needed with:
@@ -112,6 +113,7 @@ Override as needed with:
 - `MAX_RESPONSE_LENGTH`
 - `TOTAL_TOKEN_BUDGET`
 - `GPU_MEMORY_UTILIZATION`
+- `TEST_FREQ`
 
 ## Stability Notes
 
@@ -142,8 +144,14 @@ The current launcher has already baked these fixes in.
 
 ## Validation Cadence
 
-Current VeRL setup validates on the 10-example `half_subdivision_test` slice once
-before training starts.
+Current VeRL setup validates on the 10-example `half_subdivision_test` slice:
 
-It is not currently set to re-run validation every `n` steps because the trainer
-is still on `test_freq=-1`.
+- once before training starts
+- every `TEST_FREQ` steps during training
+
+Default:
+
+- `TEST_FREQ=50`
+
+Those validation metrics are what drive the W&B `val-core/...` and `val-aux/...`
+graphs over time.
