@@ -5,6 +5,8 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PRIME_RL_DIR="${PRIME_RL_DIR:-/workspace/prime-rl}"
 PRIME_RL_REF="${PRIME_RL_REF:-bffd3103b29c60c972fd3829a74fd9c01506d855}"
 
+git -C "$REPO_ROOT" submodule update --init --recursive external/VisGeomBench
+
 if [[ ! -d "$PRIME_RL_DIR/.git" ]]; then
   git clone https://github.com/PrimeIntellect-ai/prime-rl.git "$PRIME_RL_DIR"
 fi
