@@ -13,4 +13,4 @@ fi
 
 cd "$PRIME_RL_DIR"
 uv pip install -e "$REPO_ROOT/environments/half_subdivision_shaped"
-uv run rl @ "$CONFIG_PATH" "$@"
+uv run --no-sync rl @ "$CONFIG_PATH" "$@"

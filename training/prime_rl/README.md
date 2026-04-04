@@ -53,6 +53,13 @@ That will:
   - first `4` test examples
   - shorter run, eval every `10` steps
 
+- [h100_8x.toml](/Users/jashvira/code/scbench-posttrain/training/prime_rl/h100_8x.toml)
+  - single-node `8x H100 80GB` setup
+  - `2` train GPUs, `6` infer GPUs
+  - `seq_len = 16384`
+  - `batch_size = 256`
+  - `rollouts_per_example = 8`
+
 Both configs use:
 
 - `Qwen/Qwen3-8B`
@@ -75,6 +82,14 @@ Full:
 cd /Users/jashvira/code/scbench-posttrain
 PRIME_RL_DIR=/workspace/prime-rl \
 ./scripts/run_prime_rl_half_subdivision.sh
+```
+
+8x H100:
+
+```bash
+cd /Users/jashvira/code/scbench-posttrain
+PRIME_RL_DIR=/workspace/prime-rl \
+./scripts/run_prime_rl_half_subdivision_h100_8x.sh
 ```
 
 Both wrappers:
@@ -111,3 +126,11 @@ Sanity-check pass before long RL:
 - `seq_len` is full prompt+completion budget in PRIME-RL
 - smoke uses env-level `limit` args, so no separate parquet prep path is needed
 - full config checkpoints every `50` steps; smoke checkpoints every `10`
+- on Hopper boxes, install FlashAttention3 in the PRIME-RL workspace:
+
+```bash
+cd /workspace/prime-rl
+uv pip install "flash-attn-3 @ git+https://github.com/Dao-AILab/flash-attention.git@main#subdirectory=hopper" --no-build-isolation
+```
+
+- after installing FlashAttention3, keep using the repo wrappers here because they run `uv run --no-sync`, which avoids uninstalling the package again

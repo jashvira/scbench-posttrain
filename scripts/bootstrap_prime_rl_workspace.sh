@@ -16,7 +16,7 @@ cd "$PRIME_RL_DIR"
 uv sync --all-extras
 uv pip install -e "$REPO_ROOT/environments/half_subdivision_shaped"
 
-uv run python - <<'PY'
+uv run --no-sync python - <<'PY'
 import verifiers as vf
 env = vf.load_environment("half-subdivision-shaped", task_name="half_subdivision_test", limit=1)
 print(type(env).__name__)
