@@ -94,6 +94,15 @@ PRIME_RL_DIR=/workspace/prime-rl \
 ./scripts/run_prime_rl_half_subdivision_h100_8x.sh
 ```
 
+Curriculum phase on the train env:
+
+```bash
+cd /Users/jashvira/code/scbench-posttrain
+CURRICULUM_MAX_STAGE=stage_02_2d_easy \
+PRIME_RL_DIR=/workspace/prime-rl \
+./scripts/run_prime_rl_half_subdivision_h100_8x.sh
+```
+
 Both wrappers:
 
 - install the local env into the PRIME-RL workspace first
@@ -127,6 +136,19 @@ Sanity-check pass before long RL:
 - use LoRA first on `2x A100 80GB`; full finetune is the wrong starting point
 - `seq_len` is full prompt+completion budget in PRIME-RL
 - smoke uses env-level `limit` args, so no separate parquet prep path is needed
+- curriculum can be enforced on the train env with:
+  - `CURRICULUM_STAGE=stage_03_2d_medium` for exact-stage runs
+  - `CURRICULUM_MAX_STAGE=stage_04_2d_hard` for cumulative phase runs
+- cumulative stage order is:
+  - `stage_01_2d_intro`
+  - `stage_02_2d_easy`
+  - `stage_03_2d_medium`
+  - `stage_04_2d_hard`
+  - `stage_00_curated`
+  - `stage_05_3d_intro`
+  - `stage_06_3d_medium`
+  - `stage_07_3d_hard`
+  - `stage_08_3d_topoff`
 - full config checkpoints every `50` steps; smoke checkpoints every `10`
 - on Hopper boxes, install FlashAttention3 in the PRIME-RL workspace:
 

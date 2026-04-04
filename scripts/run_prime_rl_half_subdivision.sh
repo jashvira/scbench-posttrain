@@ -31,4 +31,26 @@ cd "$PRIME_RL_DIR"
 export VLLM_USE_DEEP_GEMM="${VLLM_USE_DEEP_GEMM:-0}"
 export VLLM_USE_DEEP_GEMM_E8M0="${VLLM_USE_DEEP_GEMM_E8M0:-0}"
 export VLLM_DEEP_GEMM_WARMUP="${VLLM_DEEP_GEMM_WARMUP:-skip}"
-"$UV_BIN" run --no-sync rl @ "$CONFIG_PATH" "$@"
+
+resolved_config_path="$CONFIG_PATH"
+if [[ -n "${CURRICULUM_STAGE:-}" || -n "${CURRICULUM_MAX_STAGE:-}" ]]; then
+  tmp_config="$(mktemp "${TMPDIR:-/tmp}/half-subdivision-prime-rl.XXXXXX.toml")"
+  trap 'rm -f "$tmp_config"' EXIT
+  cp "$CONFIG_PATH" "$tmp_config"
+
+  curriculum_args='args = { task_name = "half_subdivision"'
+  if [[ -n "${CURRICULUM_STAGE:-}" ]]; then
+    curriculum_args+=", curriculum_stage = \"${CURRICULUM_STAGE}\""
+  fi
+  if [[ -n "${CURRICULUM_MAX_STAGE:-}" ]]; then
+    curriculum_args+=", curriculum_max_stage = \"${CURRICULUM_MAX_STAGE}\""
+  fi
+  curriculum_args+=' }'
+
+  CURRICULUM_ARGS="$curriculum_args" perl -0pi -e \
+    's/args = \{ task_name = "half_subdivision" \}/$ENV{CURRICULUM_ARGS}/' \
+    "$tmp_config"
+  resolved_config_path="$tmp_config"
+fi
+
+"$UV_BIN" run --no-sync rl @ "$resolved_config_path" "$@"

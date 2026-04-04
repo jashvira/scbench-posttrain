@@ -25,18 +25,37 @@ TASK_SOURCES = {
     "half_subdivision": REPO_ROOT / "data" / "half_subdivision_curriculum.jsonl",
     "half_subdivision_test": REPO_ROOT / "data" / "half_subdivision_test.jsonl",
 }
+CURRICULUM_STAGE_ORDER = (
+    "stage_01_2d_intro",
+    "stage_02_2d_easy",
+    "stage_03_2d_medium",
+    "stage_04_2d_hard",
+    "stage_00_curated",
+    "stage_05_3d_intro",
+    "stage_06_3d_medium",
+    "stage_07_3d_hard",
+    "stage_08_3d_topoff",
+)
+CURRICULUM_STAGE_RANK = {stage: index for index, stage in enumerate(CURRICULUM_STAGE_ORDER)}
 
 
 def load_environment(
     task_name: str = "half_subdivision",
     *,
     limit: int | None = None,
+    curriculum_stage: str | None = None,
+    curriculum_max_stage: str | None = None,
     system_prompt: str | None = None,
     near_contact_credit: float = NEAR_CONTACT_CREDIT,
 ):
     """Build a shaped single-turn environment for half-subdivision tasks."""
 
-    records = load_records(task_name, limit=limit)
+    records = load_records(
+        task_name,
+        limit=limit,
+        curriculum_stage=curriculum_stage,
+        curriculum_max_stage=curriculum_max_stage,
+    )
     rows, cases = format_dataset(records)
     parser = make_parser()
 
@@ -59,7 +78,12 @@ def load_environment(
     )
 
 
-def load_records(task_name: str, limit: int | None = None) -> list[dict]:
+def load_records(
+    task_name: str,
+    limit: int | None = None,
+    curriculum_stage: str | None = None,
+    curriculum_max_stage: str | None = None,
+) -> list[dict]:
     """Load one of the local half-subdivision datasets."""
 
     try:
@@ -70,6 +94,12 @@ def load_records(task_name: str, limit: int | None = None) -> list[dict]:
     with path.open(encoding="utf-8") as handle:
         records = [json.loads(line) for line in handle if line.strip()]
 
+    records = filter_records(
+        records,
+        curriculum_stage=curriculum_stage,
+        curriculum_max_stage=curriculum_max_stage,
+    )
+
     if limit is not None:
         records = records[:limit]
 
@@ -79,6 +109,43 @@ def load_records(task_name: str, limit: int | None = None) -> list[dict]:
     ):
         raise ValueError(f"{task_name!r} contains non-half-subdivision records")
     return records
+
+
+def filter_records(
+    records: list[dict],
+    *,
+    curriculum_stage: str | None,
+    curriculum_max_stage: str | None,
+) -> list[dict]:
+    """Apply optional curriculum-stage filters before slicing."""
+
+    if curriculum_stage is not None:
+        validate_curriculum_stage(curriculum_stage)
+        records = [
+            record
+            for record in records
+            if record.get("metadata", {}).get("curriculum_stage") == curriculum_stage
+        ]
+
+    if curriculum_max_stage is not None:
+        max_rank = validate_curriculum_stage(curriculum_max_stage)
+        records = [
+            record
+            for record in records
+            if CURRICULUM_STAGE_RANK.get(record.get("metadata", {}).get("curriculum_stage"), -1) <= max_rank
+        ]
+
+    return records
+
+
+def validate_curriculum_stage(stage: str) -> int:
+    """Validate a curriculum stage name and return its cumulative rank."""
+
+    try:
+        return CURRICULUM_STAGE_RANK[stage]
+    except KeyError as exc:
+        expected = ", ".join(CURRICULUM_STAGE_ORDER)
+        raise ValueError(f"Unknown curriculum stage {stage!r}. Expected one of: {expected}") from exc
 
 
 def format_dataset(
