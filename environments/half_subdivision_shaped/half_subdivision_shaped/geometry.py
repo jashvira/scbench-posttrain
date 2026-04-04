@@ -1,4 +1,4 @@
-"""Geometry helpers for half-subdivision shaped rewards."""
+"""Geometry helpers for half-subdivision rewards."""
 
 from __future__ import annotations
 
@@ -148,62 +148,7 @@ def valid_predictions(labels: list[str], case: GeometryCase) -> list[str]:
     return [label for label in labels if label in case.cells and label != case.target_label]
 
 
-def shaped_score(labels: list[str], case: GeometryCase, near_contact_credit: float) -> float:
-    """Compute the normalized shaped score for one parsed prediction."""
-
-    valid_labels = valid_predictions(labels, case)
-    denominator = max(len(case.truth_labels), 1)
-    total_credit = sum(
-        contact_credit(
-            case.cells[label],
-            case.cells[case.target_label],
-            case.dimension_count,
-            near_contact_credit,
-        )
-        for label in valid_labels
-    )
-    return min(total_credit / denominator, 1.0)
-
-
 def exact_match(labels: list[str], case: GeometryCase) -> float:
     """Return 1.0 when the predicted neighbour set matches exactly."""
 
     return 1.0 if frozenset(valid_predictions(labels, case)) == case.truth_labels else 0.0
-
-
-def contact_credit(a: Cell, b: Cell, dimension_count: int, near_contact_credit: float) -> float:
-    """Score one predicted cell against the target."""
-
-    touch = 0
-    overlap = 0
-    axes = [
-        ((a.x0, a.x1), (b.x0, b.x1)),
-        ((a.y0, a.y1), (b.y0, b.y1)),
-    ]
-    if dimension_count == 3:
-        axes.append(((a.z0, a.z1), (b.z0, b.z1)))
-
-    for first, second in axes:
-        relation = axis_relation(*first, *second)
-        if relation == "separate":
-            return 0.0
-        if relation == "touch":
-            touch += 1
-        else:
-            overlap += 1
-
-    if touch == 1 and overlap == dimension_count - 1:
-        return 1.0
-    if touch >= 2 and touch + overlap == dimension_count:
-        return near_contact_credit
-    return 0.0
-
-
-def axis_relation(a0: float, a1: float, b0: float, b1: float) -> str:
-    """Classify one-dimensional interval relation."""
-
-    if max(a0, b0) < min(a1, b1) - EPS:
-        return "overlap"
-    if abs(a1 - b0) < EPS or abs(a0 - b1) < EPS:
-        return "touch"
-    return "separate"

@@ -1,4 +1,4 @@
-"""Verifiers env assembly for half-subdivision shaped rewards."""
+"""Verifiers env assembly for half-subdivision rewards."""
 
 from __future__ import annotations
 
@@ -13,11 +13,8 @@ from .geometry import (
     build_geometry_case,
     exact_match,
     resolve_case,
-    shaped_score,
 )
 from .parser import make_parser, parse_labels
-
-NEAR_CONTACT_CREDIT = 0.25
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 TASK_SOURCES = {
@@ -45,9 +42,8 @@ def load_environment(
     curriculum_stage: str | None = None,
     curriculum_max_stage: str | None = None,
     system_prompt: str | None = None,
-    near_contact_credit: float = NEAR_CONTACT_CREDIT,
 ):
-    """Build a shaped single-turn environment for half-subdivision tasks."""
+    """Build a single-turn environment for half-subdivision tasks."""
 
     records = load_records(
         task_name,
@@ -59,12 +55,7 @@ def load_environment(
     parser = make_parser()
 
     rubric = vf.Rubric(parser=parser)
-    rubric.add_reward_func(
-        make_shaped_reward(
-            cases,
-            near_contact_credit=near_contact_credit,
-        )
-    )
+    rubric.add_reward_func(make_reward(cases))
     rubric.add_metric(parseable)
     rubric.add_metric(make_exact_match_metric(cases))
 
@@ -169,14 +160,10 @@ def format_dataset(
     return rows, cases
 
 
-def make_shaped_reward(
-    cases: dict[str, GeometryCase],
-    *,
-    near_contact_credit: float,
-):
-    """Create the main shaped reward function."""
+def make_reward(cases: dict[str, GeometryCase]):
+    """Create the main reward function."""
 
-    def shaped_reward(parser, completion, *, info=None, **_kwargs) -> float:
+    def reward(parser, completion, *, info=None, **_kwargs) -> float:
         labels = parse_labels(parser.parse_answer(completion))
         if labels is None:
             return 0.0
@@ -185,10 +172,10 @@ def make_shaped_reward(
         if case is None:
             return 0.0
 
-        return shaped_score(labels, case, near_contact_credit)
+        return exact_match(labels, case)
 
-    shaped_reward.__name__ = "shaped_reward"
-    return shaped_reward
+    reward.__name__ = "reward"
+    return reward
 
 
 def parseable(parser, completion, *, info=None, **_kwargs) -> float:
