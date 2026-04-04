@@ -11,10 +11,9 @@ from datasets import Dataset
 from .geometry import (
     GeometryCase,
     build_geometry_case,
-    geometric_credit_sum,
+    exact_match,
     resolve_case,
     shaped_score,
-    valid_predictions,
 )
 from .parser import make_parser, parse_labels
 
@@ -67,8 +66,7 @@ def load_environment(
         )
     )
     rubric.add_metric(parseable)
-    rubric.add_metric(make_valid_labels_metric(cases))
-    rubric.add_metric(make_geometric_credit_metric(cases, near_contact_credit=near_contact_credit))
+    rubric.add_metric(make_exact_match_metric(cases))
 
     return vf.SingleTurnEnv(
         dataset=Dataset.from_list(rows),
@@ -200,37 +198,15 @@ def parseable(parser, completion, *, info=None, **_kwargs) -> float:
     return 1.0 if parse_labels(parser.parse_answer(completion)) is not None else 0.0
 
 
-def make_valid_labels_metric(cases: dict[str, GeometryCase]):
-    """Create a zero-weight valid-label metric."""
+def make_exact_match_metric(cases: dict[str, GeometryCase]):
+    """Create a zero-weight exact-match metric."""
 
-    def valid_labels(parser, completion, *, info=None, **_kwargs) -> float:
+    def exact_match_metric(parser, completion, *, info=None, **_kwargs) -> float:
         labels = parse_labels(parser.parse_answer(completion))
         case = resolve_case(info, cases)
         if labels is None or case is None:
             return 0.0
-        if not labels:
-            return 1.0
-        return len(valid_predictions(labels, case)) / len(labels)
+        return exact_match(labels, case)
 
-    valid_labels.__name__ = "valid_labels"
-    return valid_labels
-
-
-def make_geometric_credit_metric(cases: dict[str, GeometryCase], *, near_contact_credit: float):
-    """Create a zero-weight near-miss geometry metric."""
-
-    def geometric_credit(parser, completion, *, info=None, **_kwargs) -> float:
-        labels = parse_labels(parser.parse_answer(completion))
-        case = resolve_case(info, cases)
-        if labels is None or case is None:
-            return 0.0
-
-        valid_labels = valid_predictions(labels, case)
-        if not valid_labels:
-            return 0.0
-
-        total = geometric_credit_sum(valid_labels, case, near_contact_credit)
-        return min(total / len(valid_labels), 1.0)
-
-    geometric_credit.__name__ = "geometric_credit"
-    return geometric_credit
+    exact_match_metric.__name__ = "exact_match"
+    return exact_match_metric
