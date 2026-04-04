@@ -10,7 +10,7 @@ from inspect_ai.dataset import MemoryDataset, Sample
 from inspect_ai.model import ChatMessageUser, ModelOutput
 from inspect_ai.solver import TaskState
 
-from evals.vgb import vgb_score, vgb_task
+from evals.vgb import _source_record_index, vgb_score, vgb_task
 from scbench_posttrain.vgb import VGBTask, log_prompt_artifacts
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -60,6 +60,43 @@ def test_vgb_task_can_slice_explicit_record_indices():
     assert len(inspect_task.dataset) == 3
     assert [sample.metadata["source_record_index"] for sample in inspect_task.dataset] == [0, 47, 192]
     assert [sample.metadata["record_index"] for sample in inspect_task.dataset] == [0, 1, 2]
+
+
+def test_source_record_index_prefers_original_dataset_index():
+    sample = Sample(
+        input="prompt",
+        id="sample",
+        metadata={
+            "name": "half_subdivision",
+            "title": "Half Subdivision Neighbours",
+            "record_id": "sample",
+            "record_index": 35,
+            "source_record_index": 82,
+            "problem_type": "half_subdivision_neighbours",
+        },
+    )
+
+    state = _make_state(sample=sample, completion="")
+
+    assert _source_record_index(state) == 82
+
+
+def test_source_record_index_falls_back_to_record_index():
+    sample = Sample(
+        input="prompt",
+        id="sample",
+        metadata={
+            "name": "half_subdivision",
+            "title": "Half Subdivision Neighbours",
+            "record_id": "sample",
+            "record_index": 7,
+            "problem_type": "half_subdivision_neighbours",
+        },
+    )
+
+    state = _make_state(sample=sample, completion="")
+
+    assert _source_record_index(state) == 7
 
 
 def test_vgb_task_accepts_keyword_task_name():

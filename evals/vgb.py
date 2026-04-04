@@ -76,6 +76,14 @@ def _merge_usage_summaries(usages: list[dict[str, Any]]) -> dict[str, Any]:
     return result
 
 
+def _source_record_index(state: TaskState) -> int:
+    metadata = state.metadata or {}
+    source_index = metadata.get("source_record_index")
+    if source_index is not None:
+        return int(source_index)
+    return int(metadata["record_index"])
+
+
 def _resolve_rlm_model_name(state: TaskState, override: str | None) -> str:
     if override:
         return override
@@ -154,7 +162,7 @@ async def _run_rlm_arm(
         ) from exc
 
     loaded_task = load_vgb_task(str(state.metadata["name"]))
-    record = loaded_task.records[int(state.metadata["record_index"])]
+    record = loaded_task.records[_source_record_index(state)]
     log_prompt_artifacts(record)
     resolved_model_name = _resolve_rlm_model_name(state, rlm_model_name)
     backend_kwargs: dict[str, Any] = {"model_name": resolved_model_name}
@@ -246,7 +254,7 @@ def vgb_direct():
 
     async def solve(state: TaskState, generate: Generate) -> TaskState:
         loaded_task = load_vgb_task(str(state.metadata["name"]))
-        record = loaded_task.records[int(state.metadata["record_index"])]
+        record = loaded_task.records[_source_record_index(state)]
         store = state.store_as(VGBRunStore)
         store.name = loaded_task.name
         store.arm = "direct"
