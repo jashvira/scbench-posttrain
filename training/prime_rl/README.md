@@ -65,6 +65,7 @@ Both configs use:
 - `Qwen/Qwen3-8B`
 - LoRA (`rank=32`, `alpha=64`)
 - `max_tokens = 2048`
+- W&B extras every `3` steps
 
 ## Run
 
@@ -134,3 +135,4 @@ uv pip install "flash-attn-3 @ git+https://github.com/Dao-AILab/flash-attention.
 ```
 
 - after installing FlashAttention3, keep using the repo wrappers here because they run `uv run --no-sync`, which avoids uninstalling the package again
+- PRIME-RL core scalar metrics already stream continuously; the `interval = 3` setting here is for W&B extra samples/distributions via `orchestrator.wandb.log_extras`

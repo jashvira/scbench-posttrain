@@ -12,6 +12,9 @@ name = "Qwen/Qwen3-8B"
 project = "half-subdivision-prime-rl"
 name = "qwen3-8b-half-subdivision-smoke"
 
+[orchestrator.wandb.log_extras]
+interval = 3
+
 [ckpt]
 interval = 10
 
