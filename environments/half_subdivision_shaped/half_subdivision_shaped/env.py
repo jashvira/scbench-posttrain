@@ -51,7 +51,7 @@ def load_environment(
         curriculum_stage=curriculum_stage,
         curriculum_max_stage=curriculum_max_stage,
     )
-    rows, cases = format_dataset(records)
+    rows, cases = build_dataset(records)
     parser = make_parser()
 
     rubric = vf.Rubric(parser=parser)
@@ -76,11 +76,11 @@ def load_records(
     """Load one of the local half-subdivision datasets."""
 
     try:
-        path = TASK_SOURCES[task_name]
+        source_path = TASK_SOURCES[task_name]
     except KeyError as exc:
         raise ValueError(f"Unknown half-subdivision task {task_name!r}") from exc
 
-    with path.open(encoding="utf-8") as handle:
+    with source_path.open(encoding="utf-8") as handle:
         records = [json.loads(line) for line in handle if line.strip()]
 
     records = filter_records(
@@ -137,9 +137,7 @@ def validate_curriculum_stage(stage: str) -> int:
         raise ValueError(f"Unknown curriculum stage {stage!r}. Expected one of: {expected}") from exc
 
 
-def format_dataset(
-    records: list[dict],
-) -> tuple[list[dict], dict[str, GeometryCase]]:
+def build_dataset(records: list[dict]) -> tuple[list[dict], dict[str, GeometryCase]]:
     """Convert records into a Verifiers dataset and geometry lookup."""
 
     rows: list[dict] = []
@@ -152,6 +150,7 @@ def format_dataset(
                 "id": token,
                 "prompt": [{"role": "user", "content": record["prompt"]}],
                 "answer": "",
+                # Reward funcs get this `info` field back with the completion.
                 "info": json.dumps({"record_token": token}),
             }
         )
@@ -164,12 +163,8 @@ def make_reward(cases: dict[str, GeometryCase]):
     """Create the main reward function."""
 
     def reward(parser, completion, *, info=None, **_kwargs) -> float:
-        labels = parse_labels(parser.parse_answer(completion))
-        if labels is None:
-            return 0.0
-
-        case = resolve_case(info, cases)
-        if case is None:
+        labels, case = parse_completion(parser, completion, info, cases)
+        if labels is None or case is None:
             return 0.0
 
         return exact_match(labels, case)
@@ -189,11 +184,21 @@ def make_exact_match_metric(cases: dict[str, GeometryCase]):
     """Create a zero-weight exact-match metric."""
 
     def exact_match_metric(parser, completion, *, info=None, **_kwargs) -> float:
-        labels = parse_labels(parser.parse_answer(completion))
-        case = resolve_case(info, cases)
+        labels, case = parse_completion(parser, completion, info, cases)
         if labels is None or case is None:
             return 0.0
         return exact_match(labels, case)
 
     exact_match_metric.__name__ = "exact_match"
     return exact_match_metric
+
+
+def parse_completion(
+    parser,
+    completion,
+    info,
+    cases: dict[str, GeometryCase],
+) -> tuple[list[str] | None, GeometryCase | None]:
+    """Parse the model output and resolve its backing geometry case."""
+
+    return parse_labels(parser.parse_answer(completion)), resolve_case(info, cases)

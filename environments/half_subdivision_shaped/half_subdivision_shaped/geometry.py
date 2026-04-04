@@ -104,6 +104,8 @@ def build_geometry_case(record: dict) -> GeometryCase:
             **bounds,
         )
 
+    # Rewarding exact matches still needs the full leaf geometry so we can
+    # reject labels that were never valid leaves in this subdivision.
     return GeometryCase(
         cells={
             leaf.label: Cell(
