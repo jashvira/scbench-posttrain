@@ -17,8 +17,10 @@ if [[ -z "$UV_BIN" ]]; then
     UV_BIN="$(command -v uv)"
   elif [[ -x "$PRIME_RL_DIR/.venv/bin/uv" ]]; then
     UV_BIN="$PRIME_RL_DIR/.venv/bin/uv"
+  elif [[ -x "$HOME/.local/bin/uv" ]]; then
+    UV_BIN="$HOME/.local/bin/uv"
   else
-    echo "Could not find uv. Expected it on PATH or at $PRIME_RL_DIR/.venv/bin/uv" >&2
+    echo "Could not find uv. Expected it on PATH, at $PRIME_RL_DIR/.venv/bin/uv, or at $HOME/.local/bin/uv" >&2
     exit 1
   fi
 fi
