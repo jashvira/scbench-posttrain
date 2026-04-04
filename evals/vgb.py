@@ -78,10 +78,7 @@ def _merge_usage_summaries(usages: list[dict[str, Any]]) -> dict[str, Any]:
 
 def _source_record_index(state: TaskState) -> int:
     metadata = state.metadata or {}
-    source_index = metadata.get("source_record_index")
-    if source_index is not None:
-        return int(source_index)
-    return int(metadata["record_index"])
+    return int(metadata.get("source_record_index", metadata["record_index"]))
 
 
 def _resolve_rlm_model_name(state: TaskState, override: str | None) -> str:

@@ -10,7 +10,7 @@ from inspect_ai.dataset import MemoryDataset, Sample
 from inspect_ai.model import ChatMessageUser, ModelOutput
 from inspect_ai.solver import TaskState
 
-from evals.vgb import _source_record_index, vgb_score, vgb_task
+from evals.vgb import vgb_direct, vgb_score, vgb_task
 from scbench_posttrain.vgb import VGBTask, log_prompt_artifacts
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -62,41 +62,47 @@ def test_vgb_task_can_slice_explicit_record_indices():
     assert [sample.metadata["record_index"] for sample in inspect_task.dataset] == [0, 1, 2]
 
 
-def test_source_record_index_prefers_original_dataset_index():
-    sample = Sample(
-        input="prompt",
-        id="sample",
-        metadata={
-            "name": "half_subdivision",
-            "title": "Half Subdivision Neighbours",
-            "record_id": "sample",
-            "record_index": 35,
-            "source_record_index": 82,
-            "problem_type": "half_subdivision_neighbours",
-        },
+def test_vgb_direct_uses_source_record_index_for_prompt_artifacts(monkeypatch):
+    record_a = {"id": "local", "prompt": "local prompt"}
+    record_b = {"id": "source", "prompt": "source prompt"}
+    task = VGBTask(
+        name="half_subdivision",
+        title="Half Subdivision Neighbours",
+        dataset=MemoryDataset(
+            samples=[
+                Sample(
+                    input="local prompt",
+                    id="sample",
+                    metadata={
+                        "name": "half_subdivision",
+                        "title": "Half Subdivision Neighbours",
+                        "record_id": "sample",
+                        "record_index": 0,
+                        "source_record_index": 1,
+                        "problem_type": "half_subdivision_neighbours",
+                    },
+                )
+            ]
+        ),
+        records=(record_a, record_b),
     )
 
-    state = _make_state(sample=sample, completion="")
+    captured: list[dict[str, str]] = []
 
-    assert _source_record_index(state) == 82
+    monkeypatch.setattr("evals.vgb.load_vgb_task", lambda _: task)
+    monkeypatch.setattr("evals.vgb.log_prompt_artifacts", lambda record: captured.append(record))
 
+    async def fake_generate(state, generate):
+        return state
 
-def test_source_record_index_falls_back_to_record_index():
-    sample = Sample(
-        input="prompt",
-        id="sample",
-        metadata={
-            "name": "half_subdivision",
-            "title": "Half Subdivision Neighbours",
-            "record_id": "sample",
-            "record_index": 7,
-            "problem_type": "half_subdivision_neighbours",
-        },
-    )
+    monkeypatch.setattr("evals.vgb.generate", lambda: fake_generate)
 
-    state = _make_state(sample=sample, completion="")
+    solver = vgb_direct()
+    state = _make_state(sample=task.dataset[0], completion="")
 
-    assert _source_record_index(state) == 7
+    asyncio.run(solver(state, None))
+
+    assert captured == [record_b]
 
 
 def test_vgb_task_accepts_keyword_task_name():
