@@ -21,6 +21,9 @@ interval = 50
 [trainer.model]
 impl = "hf"
 
+[trainer.tokenizer]
+name = "Qwen/Qwen3-8B"
+
 [trainer.model.ac]
 freq = 1
 
