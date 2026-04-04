@@ -14,6 +14,7 @@ git -C "$PRIME_RL_DIR" checkout "$PRIME_RL_REF"
 
 cd "$PRIME_RL_DIR"
 uv sync --all-extras
+uv pip install -e "$REPO_ROOT/external/VisGeomBench"
 uv pip install -e "$REPO_ROOT/environments/half_subdivision_shaped"
 
 uv run --no-sync python - <<'PY'

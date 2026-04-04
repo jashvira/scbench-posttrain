@@ -35,6 +35,7 @@ That will:
 - clone `prime-rl` if missing
 - pin it to the repo-tested commit
 - `uv sync --all-extras`
+- install [VisGeomBench](/Users/jashvira/code/scbench-posttrain/external/VisGeomBench) editable into the PRIME-RL workspace
 - install [half_subdivision_shaped](/Users/jashvira/code/scbench-posttrain/environments/half_subdivision_shaped) editable into the PRIME-RL workspace
 
 ## Configs
