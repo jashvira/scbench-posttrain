@@ -329,13 +329,21 @@ def vgb_score(vgb_task: VGBTask):
 @task
 def vgb_task(
     task_name: str,
-    record_indices: str | None = None,
+    record_indices: str | list[int] | list[str] | None = None,
     solver: Solver | None = None,
 ) -> Task:
     loaded_task = load_vgb_task(task_name)
     selected_indices: list[int] | None = None
     if record_indices is not None:
-        selected_indices = [int(part.strip()) for part in record_indices.split(",") if part.strip()]
+        if isinstance(record_indices, str):
+            raw_indices = [part.strip() for part in record_indices.split(",") if part.strip()]
+        else:
+            raw_indices = []
+            for item in record_indices:
+                text = str(item).strip()
+                if text:
+                    raw_indices.append(text)
+        selected_indices = [int(part) for part in raw_indices]
         loaded_task = slice_vgb_task(loaded_task, selected_indices)
     inspect_task_name = f"vgb_{loaded_task.name}"
     return Task(
