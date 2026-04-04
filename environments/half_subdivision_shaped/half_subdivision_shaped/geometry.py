@@ -148,30 +148,20 @@ def valid_predictions(labels: list[str], case: GeometryCase) -> list[str]:
     return [label for label in labels if label in case.cells and label != case.target_label]
 
 
-def geometric_credit_sum(
-    labels: list[str],
-    case: GeometryCase,
-    near_contact_credit: float,
-) -> float:
-    """Sum contact credit over predicted labels."""
+def shaped_score(labels: list[str], case: GeometryCase, near_contact_credit: float) -> float:
+    """Compute the normalized shaped score for one parsed prediction."""
 
-    return sum(
+    valid_labels = valid_predictions(labels, case)
+    denominator = max(len(case.truth_labels), 1)
+    total_credit = sum(
         contact_credit(
             case.cells[label],
             case.cells[case.target_label],
             case.dimension_count,
             near_contact_credit,
         )
-        for label in labels
+        for label in valid_labels
     )
-
-
-def shaped_score(labels: list[str], case: GeometryCase, near_contact_credit: float) -> float:
-    """Compute the normalized shaped score for one parsed prediction."""
-
-    valid_labels = valid_predictions(labels, case)
-    denominator = max(len(case.truth_labels), 1)
-    total_credit = geometric_credit_sum(valid_labels, case, near_contact_credit)
     return min(total_credit / denominator, 1.0)
 
 
