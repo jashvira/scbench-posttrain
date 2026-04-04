@@ -9,7 +9,7 @@ if [[ ! -d "$PRIME_RL_DIR/.git" ]]; then
   git clone https://github.com/PrimeIntellect-ai/prime-rl.git "$PRIME_RL_DIR"
 fi
 
-git -C "$PRIME_RL_DIR" fetch --depth 1 origin "$PRIME_RL_REF"
+git -C "$PRIME_RL_DIR" fetch --depth 1 origin main
 git -C "$PRIME_RL_DIR" checkout "$PRIME_RL_REF"
 
 cd "$PRIME_RL_DIR"

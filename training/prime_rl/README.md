@@ -9,6 +9,15 @@ Use the official PRIME-RL stack shape:
 - run `uv run rl @ ...`
 - let PRIME-RL manage trainer, orchestrator, and inference
 
+This setup follows the practical PRIME-RL defaults that matter here:
+
+- LoRA first, not full finetune
+- smoke run before the full run
+- benchmark before long training if hardware usage is unclear
+- periodic checkpointing on longer runs
+- periodic eval on the held-out 10-example slice
+- no difficulty buffer on this task, because baseline reward can be all-zero
+
 ## Bootstrap
 
 On a Prime RL image, `prime-rl` already lives in `/workspace/prime-rl`.
@@ -34,6 +43,9 @@ That will:
   - default 2-GPU LoRA GRPO run
   - `1` train GPU, `1` infer GPU
   - full curriculum train, 10-example test eval
+  - `seq_len = 12288`
+  - `batch_size = 64`
+  - `rollouts_per_example = 4`
 
 - [smoke.toml](/Users/jashvira/code/scbench-posttrain/training/prime_rl/smoke.toml)
   - fail-fast bring-up
@@ -81,8 +93,21 @@ Example:
   --max-steps 20
 ```
 
+Benchmark-first pass:
+
+```bash
+./scripts/run_prime_rl_half_subdivision_smoke.sh --bench
+```
+
+Sanity-check pass before long RL:
+
+- run the smoke config first
+- confirm the environment loads and rollouts complete
+- check that validation is producing non-zero parseable behavior on at least some samples before committing to a long run
+
 ## Notes
 
 - use LoRA first on `2x A100 80GB`; full finetune is the wrong starting point
 - `seq_len` is full prompt+completion budget in PRIME-RL
 - smoke uses env-level `limit` args, so no separate parquet prep path is needed
+- full config checkpoints every `50` steps; smoke checkpoints every `10`

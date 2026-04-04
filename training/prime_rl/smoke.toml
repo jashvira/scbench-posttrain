@@ -13,6 +13,7 @@ project = "half-subdivision-prime-rl"
 name = "qwen3-8b-half-subdivision-smoke"
 
 [ckpt]
+interval = 10
 
 [trainer.model]
 impl = "hf"
