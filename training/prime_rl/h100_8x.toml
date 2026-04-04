@@ -1,5 +1,5 @@
 max_steps = 500
-seq_len = 16384
+seq_len = 32768
 
 [deployment]
 num_train_gpus = 2
@@ -65,4 +65,4 @@ rollouts_per_example = 1
 dp = 6
 
 [inference.model]
-max_model_len = 16384
+max_model_len = 32768
