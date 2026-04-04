@@ -16,7 +16,7 @@ name = "qwen3-8b-half-subdivision-h100x8"
 interval = 3
 
 [ckpt]
-interval = 50
+interval = 25
 
 [trainer.model]
 impl = "hf"
