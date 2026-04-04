@@ -44,7 +44,7 @@ That will:
   - default 2-GPU LoRA GRPO run
   - `1` train GPU, `1` infer GPU
   - full curriculum train, 10-example test eval
-  - `seq_len = 8196`
+  - `seq_len = 16384`
   - `batch_size = 64`
   - `rollouts_per_example = 4`
 
@@ -57,15 +57,15 @@ That will:
 - [h100_8x.toml](/Users/jashvira/code/scbench-posttrain/training/prime_rl/h100_8x.toml)
   - single-node `8x H100 80GB` setup
   - `2` train GPUs, `6` infer GPUs
-  - `seq_len = 8196`
+  - `seq_len = 16384`
   - `batch_size = 256`
   - `rollouts_per_example = 8`
 
-Both configs use:
+Both full configs use:
 
 - `Qwen/Qwen3-8B`
 - LoRA (`rank=32`, `alpha=64`)
-- `max_tokens = 2048`
+- `max_tokens = 8196`
 - W&B extras every `3` steps
 
 ## Run

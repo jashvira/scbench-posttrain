@@ -1,5 +1,5 @@
 max_steps = 500
-seq_len = 8196
+seq_len = 16384
 
 [deployment]
 num_train_gpus = 1
@@ -39,7 +39,7 @@ batch_size = 64
 rollouts_per_example = 4
 
 [orchestrator.sampling]
-max_tokens = 2048
+max_tokens = 8196
 
 [[orchestrator.env]]
 id = "half-subdivision-shaped"
@@ -50,7 +50,7 @@ args = { task_name = "half_subdivision" }
 interval = 10
 
 [orchestrator.eval.sampling]
-max_tokens = 2048
+max_tokens = 8196
 
 [[orchestrator.eval.env]]
 id = "half-subdivision-shaped"
@@ -62,4 +62,4 @@ rollouts_per_example = 1
 [trainer]
 
 [inference.model]
-max_model_len = 8196
+max_model_len = 16384
