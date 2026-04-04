@@ -11,7 +11,22 @@ if [[ ! -d "$PRIME_RL_DIR" ]]; then
   exit 1
 fi
 
+UV_BIN="${UV_BIN:-}"
+if [[ -z "$UV_BIN" ]]; then
+  if command -v uv >/dev/null 2>&1; then
+    UV_BIN="$(command -v uv)"
+  elif [[ -x "$PRIME_RL_DIR/.venv/bin/uv" ]]; then
+    UV_BIN="$PRIME_RL_DIR/.venv/bin/uv"
+  else
+    echo "Could not find uv. Expected it on PATH or at $PRIME_RL_DIR/.venv/bin/uv" >&2
+    exit 1
+  fi
+fi
+
 cd "$PRIME_RL_DIR"
-uv pip install -e "$REPO_ROOT/external/VisGeomBench"
-uv pip install -e "$REPO_ROOT/environments/half_subdivision_shaped"
-uv run --no-sync rl @ "$CONFIG_PATH" "$@"
+"$UV_BIN" pip install -e "$REPO_ROOT/external/VisGeomBench"
+"$UV_BIN" pip install -e "$REPO_ROOT/environments/half_subdivision_shaped"
+export VLLM_USE_DEEP_GEMM="${VLLM_USE_DEEP_GEMM:-0}"
+export VLLM_USE_DEEP_GEMM_E8M0="${VLLM_USE_DEEP_GEMM_E8M0:-0}"
+export VLLM_DEEP_GEMM_WARMUP="${VLLM_DEEP_GEMM_WARMUP:-skip}"
+"$UV_BIN" run --no-sync rl @ "$CONFIG_PATH" "$@"
