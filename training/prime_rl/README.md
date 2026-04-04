@@ -150,6 +150,7 @@ Sanity-check pass before long RL:
   - `stage_07_3d_hard`
   - `stage_08_3d_topoff`
 - full config checkpoints every `50` steps; smoke checkpoints every `10`
+- eval cadence is every `10` steps on current full and smoke configs
 - on Hopper boxes, install FlashAttention3 in the PRIME-RL workspace:
 
 ```bash

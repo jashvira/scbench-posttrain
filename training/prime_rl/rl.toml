@@ -47,7 +47,7 @@ name = "half-subdivision-train"
 args = { task_name = "half_subdivision" }
 
 [orchestrator.eval]
-interval = 25
+interval = 10
 
 [orchestrator.eval.sampling]
 max_tokens = 2048
