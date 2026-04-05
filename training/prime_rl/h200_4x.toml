@@ -1,0 +1,80 @@
+max_steps = 500
+seq_len = 32768
+
+[deployment]
+num_train_gpus = 1
+num_infer_gpus = 3
+
+[model]
+name = "Qwen/Qwen3-8B"
+
+[wandb]
+project = "half-subdivision-prime-rl"
+name = "qwen3-8b-half-subdivision-h200x4"
+
+[orchestrator.wandb.log_extras]
+interval = 3
+
+[ckpt]
+interval = 25
+
+[trainer.model]
+impl = "hf"
+fused_lm_head_token_chunk_size = "auto"
+
+[trainer.tokenizer]
+name = "Qwen/Qwen3-8B"
+
+[trainer.model.ac]
+freq = 1
+
+[trainer.model.lora]
+rank = 16
+alpha = 32
+
+[trainer.optim]
+lr = 1e-4
+
+[orchestrator]
+batch_size = 128
+rollouts_per_example = 8
+max_async_level = 0
+
+[orchestrator.client]
+base_url = ["http://127.0.0.1:18001/v1"]
+
+[orchestrator.sampling]
+max_tokens = 16384
+
+[[orchestrator.env]]
+id = "half-subdivision-shaped"
+name = "half-subdivision-train-h200x4"
+args = { task_name = "half_subdivision" }
+
+[orchestrator.eval]
+interval = 10
+
+[orchestrator.eval.sampling]
+max_tokens = 16384
+
+[[orchestrator.eval.env]]
+id = "half-subdivision-shaped"
+name = "half-subdivision-test-h200x4"
+args = { task_name = "half_subdivision_test" }
+num_examples = 5
+rollouts_per_example = 1
+
+[trainer]
+max_async_level = 0
+
+[trainer.loss]
+type = "default"
+
+[inference.server]
+port = 18001
+
+[inference.parallel]
+dp = 3
+
+[inference.model]
+max_model_len = 32768
