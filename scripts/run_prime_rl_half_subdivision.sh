@@ -5,6 +5,12 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PRIME_RL_DIR="${PRIME_RL_DIR:-/workspace/prime-rl}"
 CONFIG_PATH="${CONFIG_PATH:-$REPO_ROOT/training/prime_rl/rl.toml}"
 
+if [[ -f "$HOME/.bash_profile" ]]; then
+  # Load persisted tokens such as WANDB_API_KEY and HF_TOKEN on fresh shells.
+  # shellcheck disable=SC1090
+  source "$HOME/.bash_profile"
+fi
+
 if [[ ! -d "$PRIME_RL_DIR" ]]; then
   echo "Missing PRIME_RL_DIR=$PRIME_RL_DIR" >&2
   echo "Run $REPO_ROOT/scripts/bootstrap_prime_rl_workspace.sh first." >&2
