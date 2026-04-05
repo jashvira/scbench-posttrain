@@ -20,6 +20,7 @@ interval = 25
 
 [trainer.model]
 impl = "hf"
+fused_lm_head_token_chunk_size = "auto"
 
 [trainer.tokenizer]
 name = "Qwen/Qwen3-8B"
