@@ -1,4 +1,4 @@
-"""Geometry helpers for half-subdivision rewards."""
+"""Geometry helpers for half-subdivision scoring."""
 
 from __future__ import annotations
 
@@ -35,7 +35,7 @@ class Cell:
 
 
 @dataclass(frozen=True)
-class GeometryCase:
+class Case:
     """Precomputed geometry for one half-subdivision record."""
 
     cells: dict[str, Cell]
@@ -62,7 +62,7 @@ def vgb_runtime():
             os.chdir(previous_cwd)
 
 
-def build_geometry_case(record: dict) -> GeometryCase:
+def build_case(record: dict) -> Case:
     """Rebuild the target cell and all leaves for one record."""
 
     datagen_args = record["datagen_args"]
@@ -104,9 +104,7 @@ def build_geometry_case(record: dict) -> GeometryCase:
             **bounds,
         )
 
-    # Rewarding exact matches still needs the full leaf geometry so we can
-    # reject labels that were never valid leaves in this subdivision.
-    return GeometryCase(
+    return Case(
         cells={
             leaf.label: Cell(
                 label=leaf.label,
@@ -129,8 +127,8 @@ def build_geometry_case(record: dict) -> GeometryCase:
     )
 
 
-def resolve_case(info, cases: dict[str, GeometryCase]) -> GeometryCase | None:
-    """Resolve a geometry case from rollout info."""
+def resolve_case(info, cases: dict[str, Case]) -> Case | None:
+    """Resolve a case from rollout info."""
 
     if isinstance(info, str):
         try:
@@ -144,13 +142,22 @@ def resolve_case(info, cases: dict[str, GeometryCase]) -> GeometryCase | None:
     return None
 
 
-def valid_predictions(labels: list[str], case: GeometryCase) -> list[str]:
-    """Keep only valid non-target leaf labels."""
+def predicted_labels(labels: list[str], case: Case) -> frozenset[str]:
+    """Return valid non-target leaf labels."""
 
-    return [label for label in labels if label in case.cells and label != case.target_label]
+    return frozenset(label for label in labels if label in case.cells and label != case.target_label)
 
 
-def exact_match(labels: list[str], case: GeometryCase) -> float:
+def score(labels: list[str], case: Case) -> float:
+    """Return the fraction of true neighbours that were named."""
+
+    predicted = predicted_labels(labels, case)
+    if not case.truth_labels:
+        return 1.0 if not predicted else 0.0
+    return len(predicted & case.truth_labels) / len(case.truth_labels)
+
+
+def is_correct(labels: list[str], case: Case) -> float:
     """Return 1.0 when the predicted neighbour set matches exactly."""
 
-    return 1.0 if frozenset(valid_predictions(labels, case)) == case.truth_labels else 0.0
+    return 1.0 if predicted_labels(labels, case) == case.truth_labels else 0.0

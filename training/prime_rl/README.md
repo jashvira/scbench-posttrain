@@ -61,6 +61,13 @@ That will:
   - `batch_size = 256`
   - `rollouts_per_example = 8`
 
+- [h100_2x.toml](/Users/jashvira/code/scbench-posttrain/training/prime_rl/h100_2x.toml)
+  - single-node `2x H100 80GB` setup
+  - `1` train GPU, `1` infer GPU
+  - `seq_len = 32768`
+  - `batch_size = 128`
+  - `rollouts_per_example = 8`
+
 Both full configs use:
 
 - `Qwen/Qwen3-8B`
@@ -92,6 +99,14 @@ PRIME_RL_DIR=/workspace/prime-rl \
 cd /Users/jashvira/code/scbench-posttrain
 PRIME_RL_DIR=/workspace/prime-rl \
 ./scripts/run_prime_rl_half_subdivision_h100_8x.sh
+```
+
+2x H100:
+
+```bash
+cd /Users/jashvira/code/scbench-posttrain
+PRIME_RL_DIR=/workspace/prime-rl \
+./scripts/run_prime_rl_half_subdivision_h100_2x.sh
 ```
 
 Curriculum phase on the train env:
@@ -129,7 +144,7 @@ Sanity-check pass before long RL:
 
 - run the smoke config first
 - confirm the environment loads and rollouts complete
-- check that validation is producing non-zero parseable behavior on at least some samples before committing to a long run
+- check that validation is producing non-zero `format_ok` behavior on at least some samples before committing to a long run
 
 ## Notes
 

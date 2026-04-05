@@ -1,4 +1,4 @@
-"""Shaped Verifiers environment for half-subdivision neighbour tasks."""
+"""Verifiers environment for half-subdivision neighbour tasks."""
 
 from .env import load_environment
 

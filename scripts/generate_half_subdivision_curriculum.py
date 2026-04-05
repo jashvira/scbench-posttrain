@@ -15,14 +15,9 @@ BASE_CONFIG_PATH = VGB_ROOT / "configs" / "half_subdivision.toml"
 TOTAL_RECORDS = 300
 
 TEST_STAGE_QUOTAS: tuple[tuple[str, int], ...] = (
-    ("stage_01_2d_intro", 1),
-    ("stage_02_2d_easy", 1),
-    ("stage_03_2d_medium", 1),
-    ("stage_04_2d_hard", 2),
-    ("stage_00_curated", 1),
-    ("stage_05_3d_intro", 1),
-    ("stage_06_3d_medium", 1),
-    ("stage_07_3d_hard", 2),
+    ("stage_01_2d_intro", 3),
+    ("stage_02_2d_easy", 3),
+    ("stage_03_2d_medium", 4),
 )
 
 sys.path.insert(0, str(VGB_ROOT))
@@ -190,12 +185,18 @@ def _meets_profile_floor(record: dict[str, Any], profile: Profile) -> bool:
     )
 
 
-def _build_profile_records(profile: Profile, profile_index: int) -> list[dict[str, Any]]:
+def _build_profile_records(
+    profile: Profile,
+    profile_index: int,
+    *,
+    extra_seen_ids: set[str] | None = None,
+    extra_seen_prompts: set[str] | None = None,
+) -> list[dict[str, Any]]:
     from visual_geometry_bench.datagen.half_subdivision_neighbours import generate_dataset_record
 
     records: list[dict[str, Any]] = []
-    seen_ids: set[str] = set()
-    seen_prompts: set[str] = set()
+    seen_ids: set[str] = set(extra_seen_ids or ())
+    seen_prompts: set[str] = set(extra_seen_prompts or ())
     attempt = 0
 
     while len(records) < profile.count:
@@ -245,29 +246,52 @@ def _build_profile_records(profile: Profile, profile_index: int) -> list[dict[st
     return records
 
 
-def _build_test_slice(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _build_test_records(
+    records: list[dict[str, Any]],
+    profiles: tuple[Profile, ...],
+) -> list[dict[str, Any]]:
     test_records: list[dict[str, Any]] = []
-    source_index_by_id = {record["id"]: index for index, record in enumerate(records)}
+    seen_ids = {record["id"] for record in records}
+    seen_prompts = {record["prompt"] for record in records}
+    profiles_by_name = {profile.name: profile for profile in profiles}
     bucket = 0
 
     for stage_name, quota in TEST_STAGE_QUOTAS:
-        stage_records = [
-            record
-            for record in records
-            if record["metadata"].get("curriculum_stage") == stage_name
-        ]
-        if len(stage_records) < quota:
-            raise SystemExit(f"Stage {stage_name} has {len(stage_records)} records, need {quota}")
+        try:
+            base_profile = profiles_by_name[stage_name]
+        except KeyError as exc:
+            raise SystemExit(f"Missing profile for test stage {stage_name}") from exc
 
-        for rank in range(quota):
-            index = ((2 * rank + 1) * len(stage_records)) // (2 * quota)
-            index = min(index, len(stage_records) - 1)
-            record = json.loads(json.dumps(stage_records[index]))
+        test_profile = Profile(
+            name=stage_name,
+            dimension=base_profile.dimension,
+            count=quota,
+            max_depth_range=base_profile.max_depth_range,
+            min_depth_range=base_profile.min_depth_range,
+            split_prob_range=base_profile.split_prob_range,
+            axis_cycles=base_profile.axis_cycles,
+            difficulty=base_profile.difficulty,
+            min_leaf_count=base_profile.min_leaf_count,
+            min_target_depth=base_profile.min_target_depth,
+        )
+
+        stage_records = _build_profile_records(
+            test_profile,
+            10_000 + bucket,
+            extra_seen_ids=seen_ids,
+            extra_seen_prompts=seen_prompts,
+        )
+
+        for rank, raw_record in enumerate(stage_records):
+            record = json.loads(json.dumps(raw_record))
             metadata = record.setdefault("metadata", {})
             metadata["slice"] = "test"
             metadata["slice_bucket"] = bucket
-            metadata["slice_source_index"] = source_index_by_id[record["id"]]
+            metadata["slice_source_index"] = -1
+            metadata["curriculum_source"] = "generated_test"
             test_records.append(record)
+            seen_ids.add(record["id"])
+            seen_prompts.add(record["prompt"])
             bucket += 1
 
     test_records.sort(key=lambda record: int(record["metadata"]["curriculum_score"]))
@@ -327,7 +351,7 @@ def main() -> None:
     for index, record in enumerate(records):
         record["metadata"]["curriculum_index"] = index
 
-    test_records = _build_test_slice(records)
+    test_records = _build_test_records(records, PROFILES)
     _write_jsonl(OUTPUT_PATH, records)
     _write_jsonl(TEST_OUTPUT_PATH, test_records)
 

@@ -28,8 +28,8 @@ name = "Qwen/Qwen3-8B"
 freq = 1
 
 [trainer.model.lora]
-rank = 32
-alpha = 64
+rank = 16
+alpha = 32
 
 [trainer.optim]
 lr = 1e-5

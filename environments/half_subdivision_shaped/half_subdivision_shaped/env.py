@@ -1,4 +1,4 @@
-"""Verifiers env assembly for half-subdivision rewards."""
+"""Verifiers env assembly for half-subdivision scoring."""
 
 from __future__ import annotations
 
@@ -9,10 +9,11 @@ import verifiers as vf
 from datasets import Dataset
 
 from .geometry import (
-    GeometryCase,
-    build_geometry_case,
-    exact_match,
+    Case,
+    build_case,
+    is_correct,
     resolve_case,
+    score,
 )
 from .parser import make_parser, parse_labels
 
@@ -56,8 +57,8 @@ def load_environment(
 
     rubric = vf.Rubric(parser=parser)
     rubric.add_reward_func(make_reward(cases))
-    rubric.add_metric(parseable)
-    rubric.add_metric(make_exact_match_metric(cases))
+    rubric.add_metric(format_ok)
+    rubric.add_metric(make_correct_metric(cases))
 
     return vf.SingleTurnEnv(
         dataset=Dataset.from_list(rows),
@@ -137,11 +138,11 @@ def validate_curriculum_stage(stage: str) -> int:
         raise ValueError(f"Unknown curriculum stage {stage!r}. Expected one of: {expected}") from exc
 
 
-def build_dataset(records: list[dict]) -> tuple[list[dict], dict[str, GeometryCase]]:
+def build_dataset(records: list[dict]) -> tuple[list[dict], dict[str, Case]]:
     """Convert records into a Verifiers dataset and geometry lookup."""
 
     rows: list[dict] = []
-    cases: dict[str, GeometryCase] = {}
+    cases: dict[str, Case] = {}
 
     for index, record in enumerate(records):
         token = str(record.get("id", index))
@@ -154,12 +155,12 @@ def build_dataset(records: list[dict]) -> tuple[list[dict], dict[str, GeometryCa
                 "info": json.dumps({"record_token": token}),
             }
         )
-        cases[token] = build_geometry_case(record)
+        cases[token] = build_case(record)
 
     return rows, cases
 
 
-def make_reward(cases: dict[str, GeometryCase]):
+def make_reward(cases: dict[str, Case]):
     """Create the main reward function."""
 
     def reward(parser, completion, *, info=None, **_kwargs) -> float:
@@ -167,38 +168,38 @@ def make_reward(cases: dict[str, GeometryCase]):
         if labels is None or case is None:
             return 0.0
 
-        return exact_match(labels, case)
+        return score(labels, case)
 
-    reward.__name__ = "reward"
+    reward.__name__ = "score"
     return reward
 
 
-def parseable(parser, completion, *, info=None, **_kwargs) -> float:
-    """Zero-weight parseability metric."""
+def format_ok(parser, completion, *, info=None, **_kwargs) -> float:
+    """Zero-weight output-format metric."""
 
     _ = info
     return 1.0 if parse_labels(parser.parse_answer(completion)) is not None else 0.0
 
 
-def make_exact_match_metric(cases: dict[str, GeometryCase]):
-    """Create a zero-weight exact-match metric."""
+def make_correct_metric(cases: dict[str, Case]):
+    """Create a zero-weight correctness metric."""
 
-    def exact_match_metric(parser, completion, *, info=None, **_kwargs) -> float:
+    def correct(parser, completion, *, info=None, **_kwargs) -> float:
         labels, case = parse_completion(parser, completion, info, cases)
         if labels is None or case is None:
             return 0.0
-        return exact_match(labels, case)
+        return is_correct(labels, case)
 
-    exact_match_metric.__name__ = "exact_match"
-    return exact_match_metric
+    correct.__name__ = "correct"
+    return correct
 
 
 def parse_completion(
     parser,
     completion,
     info,
-    cases: dict[str, GeometryCase],
-) -> tuple[list[str] | None, GeometryCase | None]:
+    cases: dict[str, Case],
+) -> tuple[list[str] | None, Case | None]:
     """Parse the model output and resolve its backing geometry case."""
 
     return parse_labels(parser.parse_answer(completion)), resolve_case(info, cases)
