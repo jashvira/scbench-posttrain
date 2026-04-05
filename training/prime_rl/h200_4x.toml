@@ -61,7 +61,7 @@ max_tokens = 16384
 id = "half-subdivision-shaped"
 name = "half-subdivision-test-h200x4"
 args = { task_name = "half_subdivision_test" }
-num_examples = 5
+num_examples = 10
 rollouts_per_example = 1
 
 [trainer]
