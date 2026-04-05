@@ -32,11 +32,15 @@ rank = 16
 alpha = 32
 
 [trainer.optim]
-lr = 1e-5
+lr = 1e-4
 
 [orchestrator]
 batch_size = 128
 rollouts_per_example = 8
+max_async_level = 0
+
+[orchestrator.client]
+base_url = ["http://127.0.0.1:18001/v1"]
 
 [orchestrator.sampling]
 max_tokens = 16384
@@ -60,6 +64,12 @@ num_examples = 10
 rollouts_per_example = 1
 
 [trainer]
+
+[trainer.loss]
+type = "default"
+
+[inference.server]
+port = 18001
 
 [inference.model]
 max_model_len = 32768
