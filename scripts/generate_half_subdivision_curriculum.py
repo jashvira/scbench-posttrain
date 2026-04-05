@@ -15,9 +15,9 @@ BASE_CONFIG_PATH = VGB_ROOT / "configs" / "half_subdivision.toml"
 TOTAL_RECORDS = 300
 
 TEST_STAGE_QUOTAS: tuple[tuple[str, int], ...] = (
-    ("stage_01_2d_intro", 3),
-    ("stage_02_2d_easy", 3),
-    ("stage_03_2d_medium", 4),
+    ("stage_01_2d_intro", 2),
+    ("stage_02_2d_easy", 2),
+    ("stage_03_2d_medium", 6),
 )
 
 sys.path.insert(0, str(VGB_ROOT))
