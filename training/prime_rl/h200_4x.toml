@@ -6,11 +6,11 @@ num_train_gpus = 1
 num_infer_gpus = 3
 
 [model]
-name = "Qwen/Qwen3-8B"
+name = "Qwen/Qwen3-4B"
 
 [wandb]
 project = "half-subdivision-prime-rl"
-name = "qwen3-8b-half-subdivision-h200x4"
+name = "qwen3-4b-half-subdivision-h200x4"
 
 [orchestrator.wandb.log_extras]
 interval = 3
@@ -21,9 +21,11 @@ interval = 25
 [trainer.model]
 impl = "hf"
 fused_lm_head_token_chunk_size = "auto"
+optimization_dtype = "bfloat16"
+reduce_dtype = "bfloat16"
 
 [trainer.tokenizer]
-name = "Qwen/Qwen3-8B"
+name = "Qwen/Qwen3-4B"
 
 [trainer.model.ac]
 freq = 1
