@@ -26,8 +26,8 @@ if [[ -z "$UV_BIN" ]]; then
 fi
 
 cd "$PRIME_RL_DIR"
-"$UV_BIN" pip install -e "$REPO_ROOT/external/VisGeomBench"
-"$UV_BIN" pip install -e "$REPO_ROOT/environments/half_subdivision_shaped"
+"$UV_BIN" pip install --python "$PRIME_RL_DIR/.venv/bin/python" -e "$REPO_ROOT/external/VisGeomBench"
+"$UV_BIN" pip install --python "$PRIME_RL_DIR/.venv/bin/python" -e "$REPO_ROOT/environments/half_subdivision_shaped"
 export VLLM_USE_DEEP_GEMM="${VLLM_USE_DEEP_GEMM:-0}"
 export VLLM_USE_DEEP_GEMM_E8M0="${VLLM_USE_DEEP_GEMM_E8M0:-0}"
 export VLLM_DEEP_GEMM_WARMUP="${VLLM_DEEP_GEMM_WARMUP:-skip}"
