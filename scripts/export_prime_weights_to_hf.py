@@ -6,7 +6,7 @@ import shutil
 from pathlib import Path
 
 from huggingface_hub import HfApi
-from transformers import AutoModelForCausalLM, AutoTokenizer, GenerationConfig
+from transformers import AutoModelForCausalLM, GenerationConfig
 
 
 def parse_args() -> argparse.Namespace:
@@ -58,20 +58,23 @@ def main() -> None:
         trust_remote_code=args.trust_remote_code,
         torch_dtype="auto",
     )
-    tokenizer = AutoTokenizer.from_pretrained(
-        args.base_tokenizer,
-        trust_remote_code=args.trust_remote_code,
-    )
 
     model.save_pretrained(args.out, safe_serialization=True, max_shard_size=args.max_shard_size)
-    tokenizer.save_pretrained(args.out)
 
     gen_config_path = args.src / "generation_config.json"
     if gen_config_path.exists():
         generation_config = GenerationConfig.from_pretrained(args.src)
         generation_config.save_pretrained(args.out)
 
-    for extra_name in ("chat_template.jinja", "special_tokens_map.json", "README.md"):
+    # Copy tokenizer sidecars verbatim from the base tokenizer to avoid
+    # tokenizer.save_pretrained() emitting vLLM-incompatible metadata for Qwen3.
+    for extra_name in (
+        "tokenizer.json",
+        "tokenizer_config.json",
+        "special_tokens_map.json",
+        "chat_template.jinja",
+        "README.md",
+    ):
         src_extra = args.base_tokenizer / extra_name
         if src_extra.exists():
             shutil.copy2(src_extra, args.out / extra_name)
